@@ -1,6 +1,8 @@
 CREATE TABLE IF NOT EXISTS organizations (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
+  base_currency TEXT NOT NULL DEFAULT 'USD',
+  status TEXT NOT NULL DEFAULT 'ACTIVE',
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -11,6 +13,8 @@ CREATE TABLE IF NOT EXISTS wallets (
   chain TEXT NOT NULL,
   address TEXT NOT NULL,
   label TEXT,
+  source_type TEXT NOT NULL DEFAULT 'ONCHAIN',
+  is_active INTEGER NOT NULL DEFAULT 1,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (organization_id) REFERENCES organizations(id)
@@ -35,6 +39,9 @@ CREATE TABLE IF NOT EXISTS ledger_transactions (
   cost_basis_usd TEXT,
   direction TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'CONFIRMED',
+  classification TEXT,
+  counterparty TEXT,
+  metadata_json TEXT,
   occurred_at TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -51,6 +58,9 @@ CREATE INDEX IF NOT EXISTS idx_tx_org_occurred
 CREATE INDEX IF NOT EXISTS idx_tx_wallet_occurred
   ON ledger_transactions(wallet_id, occurred_at);
 
+CREATE INDEX IF NOT EXISTS idx_tx_org_chain
+  ON ledger_transactions(organization_id, chain);
+
 CREATE TABLE IF NOT EXISTS reconciliation_runs (
   id TEXT PRIMARY KEY,
   organization_id TEXT NOT NULL,
@@ -58,6 +68,8 @@ CREATE TABLE IF NOT EXISTS reconciliation_runs (
   period_end TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'DRAFT',
   discrepancy_count INTEGER NOT NULL DEFAULT 0,
+  matched_count INTEGER NOT NULL DEFAULT 0,
+  unmatched_count INTEGER NOT NULL DEFAULT 0,
   notes TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -66,3 +78,192 @@ CREATE TABLE IF NOT EXISTS reconciliation_runs (
 
 CREATE INDEX IF NOT EXISTS idx_recon_org_period
   ON reconciliation_runs(organization_id, period_start, period_end);
+
+CREATE TABLE IF NOT EXISTS reports (
+  id TEXT PRIMARY KEY,
+  organization_id TEXT NOT NULL,
+  report_type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  parameters_json TEXT,
+  status TEXT NOT NULL DEFAULT 'DRAFT',
+  result_json TEXT,
+  generated_at TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (organization_id) REFERENCES organizations(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_reports_org_created
+  ON reports(organization_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS alerts (
+  id TEXT PRIMARY KEY,
+  organization_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  alert_type TEXT NOT NULL,
+  threshold_operator TEXT,
+  threshold_value REAL,
+  channel TEXT NOT NULL DEFAULT 'EMAIL',
+  severity TEXT NOT NULL DEFAULT 'MEDIUM',
+  is_active INTEGER NOT NULL DEFAULT 1,
+  last_triggered_at TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (organization_id) REFERENCES organizations(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_alerts_org_active
+  ON alerts(organization_id, is_active);
+
+CREATE TABLE IF NOT EXISTS automation_rules (
+  id TEXT PRIMARY KEY,
+  organization_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  rule_type TEXT NOT NULL,
+  conditions_json TEXT NOT NULL,
+  actions_json TEXT NOT NULL,
+  priority INTEGER NOT NULL DEFAULT 100,
+  is_active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (organization_id) REFERENCES organizations(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_rules_org_priority
+  ON automation_rules(organization_id, priority);
+
+CREATE TABLE IF NOT EXISTS erp_connections (
+  id TEXT PRIMARY KEY,
+  organization_id TEXT NOT NULL,
+  system_name TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'CONNECTED',
+  config_json TEXT,
+  last_sync_at TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (organization_id) REFERENCES organizations(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_erp_org_system
+  ON erp_connections(organization_id, system_name);
+
+CREATE TABLE IF NOT EXISTS team_members (
+  id TEXT PRIMARY KEY,
+  organization_id TEXT NOT NULL,
+  email TEXT NOT NULL,
+  display_name TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'ACCOUNTANT',
+  status TEXT NOT NULL DEFAULT 'ACTIVE',
+  permissions_json TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (organization_id) REFERENCES organizations(id)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_team_member_org_email
+  ON team_members(organization_id, email);
+
+CREATE INDEX IF NOT EXISTS idx_team_member_org_role
+  ON team_members(organization_id, role);
+
+CREATE TABLE IF NOT EXISTS transaction_notes (
+  id TEXT PRIMARY KEY,
+  organization_id TEXT NOT NULL,
+  transaction_id TEXT NOT NULL,
+  author_member_id TEXT,
+  note_text TEXT NOT NULL,
+  mentions_json TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (organization_id) REFERENCES organizations(id),
+  FOREIGN KEY (transaction_id) REFERENCES ledger_transactions(id),
+  FOREIGN KEY (author_member_id) REFERENCES team_members(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_tx_notes_tx
+  ON transaction_notes(transaction_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_tx_notes_org
+  ON transaction_notes(organization_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS transaction_groups (
+  id TEXT PRIMARY KEY,
+  organization_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  purpose TEXT,
+  created_by_member_id TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (organization_id) REFERENCES organizations(id),
+  FOREIGN KEY (created_by_member_id) REFERENCES team_members(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_tx_groups_org
+  ON transaction_groups(organization_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS transaction_group_members (
+  id TEXT PRIMARY KEY,
+  group_id TEXT NOT NULL,
+  transaction_id TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (group_id) REFERENCES transaction_groups(id),
+  FOREIGN KEY (transaction_id) REFERENCES ledger_transactions(id)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_tx_group_member_unique
+  ON transaction_group_members(group_id, transaction_id);
+
+CREATE INDEX IF NOT EXISTS idx_tx_group_member_tx
+  ON transaction_group_members(transaction_id);
+
+CREATE TABLE IF NOT EXISTS transaction_splits (
+  id TEXT PRIMARY KEY,
+  organization_id TEXT NOT NULL,
+  transaction_id TEXT NOT NULL,
+  split_ref TEXT,
+  amount_decimal TEXT NOT NULL,
+  cost_basis_usd TEXT,
+  department TEXT,
+  obligation_ref TEXT,
+  created_by_member_id TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (organization_id) REFERENCES organizations(id),
+  FOREIGN KEY (transaction_id) REFERENCES ledger_transactions(id),
+  FOREIGN KEY (created_by_member_id) REFERENCES team_members(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_tx_splits_tx
+  ON transaction_splits(transaction_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS webhook_subscriptions (
+  id TEXT PRIMARY KEY,
+  organization_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  endpoint_url TEXT NOT NULL,
+  secret_hint TEXT,
+  event_types_json TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'ACTIVE',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (organization_id) REFERENCES organizations(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_webhooks_org_status
+  ON webhook_subscriptions(organization_id, status);
+
+CREATE TABLE IF NOT EXISTS webhook_events (
+  id TEXT PRIMARY KEY,
+  organization_id TEXT NOT NULL,
+  webhook_id TEXT NOT NULL,
+  event_type TEXT NOT NULL,
+  payload_json TEXT NOT NULL,
+  delivery_status TEXT NOT NULL DEFAULT 'SIMULATED',
+  delivered_at TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (organization_id) REFERENCES organizations(id),
+  FOREIGN KEY (webhook_id) REFERENCES webhook_subscriptions(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_webhook_events_webhook
+  ON webhook_events(webhook_id, created_at DESC);

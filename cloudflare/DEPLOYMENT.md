@@ -11,10 +11,32 @@
 The Cloudflare API worker currently exposes:
 - `GET /health`
 - `GET /v1`
-- `GET/POST /v1/organizations`
-- `GET/POST /v1/wallets`
+- `GET/POST/PATCH /v1/organizations`
+- `GET/POST /v1/team-members`
+- `PATCH /v1/team-members/:id`
+- `GET /v1/dashboard/summary`
+- `GET /v1/dashboard/top-assets`
+- `GET/POST/PATCH /v1/wallets`
 - `GET/POST /v1/transactions`
-- `GET/POST /v1/reconciliations`
+- `POST /v1/transactions/bulk`
+- `GET /v1/transactions/export`
+- `GET/POST /v1/transactions/:id/notes`
+- `GET/POST /v1/transactions/:id/splits`
+- `GET/POST /v1/transaction-groups`
+- `POST /v1/cost-basis/calculate`
+- `GET/POST/PATCH /v1/reconciliations`
+- `POST /v1/reconciliations/auto-run`
+- `GET/POST /v1/reports`
+- `GET /v1/reports/:id`
+- `POST /v1/reports/:id/run`
+- `GET/POST/PATCH /v1/alerts`
+- `GET/POST/PATCH /v1/rules`
+- `GET/POST /v1/webhooks`
+- `PATCH /v1/webhooks/:id`
+- `GET /v1/webhooks/:id/events`
+- `POST /v1/webhooks/:id/test`
+- `GET/POST /v1/integrations/erp`
+- `POST /v1/integrations/erp/:id/sync`
 
 ## Redeploy Commands
 From repo root:
