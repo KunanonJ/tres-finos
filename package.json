@@ -15,6 +15,7 @@
     "build": "npm run build -w @tres/api && npm run build -w @tres/web",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
+    "test:e2e": "playwright test",
     "format": "prettier --write .",
     "db:generate": "npm run prisma:generate -w @tres/api",
     "db:migrate": "npm run prisma:migrate -w @tres/api",
