@@ -1,61 +1,232 @@
 # TRES FinOS Monorepo
 
-PRD-driven implementation workspace for TRES FinOS.
+PRD-driven implementation workspace for TRES FinOS (Web3 finance operations platform).
 
-## Apps
-- `@tres/web`: Next.js frontend operations console
-- `@tres/api`: NestJS API scaffold (local service baseline)
-- `cloudflare/api-worker`: Cloudflare Worker API (active deployed backend)
+This README is written as a handoff guide so a new engineer can continue development quickly.
 
-## Infrastructure (local)
-- PostgreSQL
-- Redis
-- Kafka
-- Temporal
+## 1) What Is Live Today
 
-## Quick Start
-1. Copy env:
-   - `cp .env.example .env`
-2. Start local infra:
-   - `docker compose up -d`
-3. Install dependencies:
-   - `npm install`
-4. Generate Prisma client:
-   - `npm run db:generate`
-5. Run apps:
-   - `npm run dev`
+- Web app (Cloudflare Pages): `https://tres-finos.pages.dev`
+- API (Cloudflare Worker): `https://tres-finos-api.chameleon-finance.workers.dev`
+- D1 database: `tres-finos-db`
 
-## Cloudflare Deploy
-- Deploy Worker API:
-  - `npm run deploy:api:cf`
-- Deploy Web app to Pages:
-  - `npm run deploy:web:cf`
-- Deploy both:
-  - `npm run deploy:cf`
+Current product surface includes:
+- Overview dashboard and KPI cards
+- Wallet and transaction operations
+- Reconciliation runs (manual + auto-run)
+- Reporting (create + run)
+- Alerts and automation rules
+- Cost basis calculation
+- Team/RBAC basics
+- Webhooks and test events
+- ERP connection + sync scaffolding
 
-## Implemented API Surface (Cloudflare Worker)
-- API Health: `GET /health`
-- API Version: `GET /v1`
-- Organizations: `GET/POST/PATCH /v1/organizations`
-- Team/RBAC: `GET/POST /v1/team-members`, `PATCH /v1/team-members/:id`
-- Dashboard: `GET /v1/dashboard/summary`, `GET /v1/dashboard/top-assets`
-- Wallets: `GET/POST/PATCH /v1/wallets`
-- Transactions: `GET/POST /v1/transactions`, `POST /v1/transactions/bulk`, `GET /v1/transactions/export`
-- Transaction collaboration: `GET/POST /v1/transactions/:id/notes`
-- Transaction splitting: `GET/POST /v1/transactions/:id/splits`
-- Transaction grouping: `GET/POST /v1/transaction-groups`
-- Cost basis: `POST /v1/cost-basis/calculate`
-- Reconciliation: `GET/POST/PATCH /v1/reconciliations`, `POST /v1/reconciliations/auto-run`
-- Reports: `GET/POST /v1/reports`, `GET /v1/reports/:id`, `POST /v1/reports/:id/run`
-- Alerts: `GET/POST/PATCH /v1/alerts`
-- Rules: `GET/POST/PATCH /v1/rules`
-- Webhooks: `GET/POST /v1/webhooks`, `PATCH /v1/webhooks/:id`, `GET /v1/webhooks/:id/events`, `POST /v1/webhooks/:id/test`
-- ERP Integrations: `GET/POST /v1/integrations/erp`, `POST /v1/integrations/erp/:id/sync`
+## 2) Product References
 
-## Notes
-The platform now includes end-to-end implementation for core PRD modules:
-ledger, dashboard summary, reconciliation, reporting, alerts/rules automation,
-cost-basis workflows, RBAC collaboration, webhook routing, and ERP sync scaffolding.
+- PRD: `TRES Finance PRD.md`
+- Delivery plan: `TRES Finance Development Plan.md`
+- UX/UI blueprint: `UXUI Blueprint.md`
+- Cloudflare runbook: `cloudflare/DEPLOYMENT.md`
 
-UX/UI design blueprint reference:
-- `UXUI Blueprint.md`
+## 3) Monorepo Structure
+
+```text
+apps/
+  api/                    # NestJS scaffold (local baseline, not production API)
+  web/                    # Next.js frontend (deployed to Cloudflare Pages)
+cloudflare/
+  api-worker/             # Production API (Cloudflare Worker + D1 schema)
+tests/e2e/                # Playwright e2e tests
+```
+
+Important:
+- The active production backend is `cloudflare/api-worker`.
+- `apps/api` exists for local/service scaffolding and Prisma workflow, but is not the deployed API.
+
+## 4) Prerequisites
+
+- Node.js `>=24 <26`
+- npm `>=11`
+- Docker Desktop (for local infra)
+- Cloudflare Wrangler CLI access (`npx wrangler ...`)
+- GitHub access to `KunanonJ/tres-finos`
+
+## 5) First-Time Setup
+
+```bash
+cp .env.example .env
+npm install
+docker compose up -d
+npm run db:generate
+```
+
+Then start local apps:
+
+```bash
+npm run dev
+```
+
+## 6) Environment Variables
+
+See `.env.example`:
+
+```env
+# Shared
+NODE_ENV=development
+
+# API
+API_PORT=3001
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/tres_finos
+REDIS_URL=redis://localhost:6379
+
+# Web
+NEXT_PUBLIC_API_URL=http://localhost:3001
+```
+
+For cloud-backed frontend testing, set:
+
+```env
+NEXT_PUBLIC_API_URL=https://tres-finos-api.chameleon-finance.workers.dev
+```
+
+## 7) Daily Development Workflow
+
+### A. Backend feature (production path)
+
+1. Edit Worker routes/logic: `cloudflare/api-worker/src/index.ts`
+2. Update D1 schema if needed: `cloudflare/api-worker/schema.sql`
+3. Apply schema locally and/or remotely
+4. Deploy Worker
+
+### B. Frontend feature
+
+1. Edit UI in `apps/web/app/page.tsx` and styles in `apps/web/app/globals.css`
+2. Validate with lint/build
+3. Deploy Pages
+
+### C. Docs
+
+Update:
+- `README.md` for developer-facing changes
+- `cloudflare/DEPLOYMENT.md` for infra/API surface changes
+
+## 8) Commands You Will Use Most
+
+### Dev and quality
+
+```bash
+npm run dev
+npm run lint
+npm run build
+npm run test
+npm run test:e2e
+```
+
+### Database (local Nest/Prisma baseline)
+
+```bash
+npm run db:generate
+npm run db:migrate
+```
+
+### Cloudflare deploy
+
+```bash
+npm run deploy:api:cf
+npm run deploy:web:cf
+npm run deploy:cf
+```
+
+### Apply D1 schema directly
+
+Remote:
+```bash
+CLOUDFLARE_ACCOUNT_ID=<your_account_id> \
+  npx wrangler d1 execute tres-finos-db --remote --file cloudflare/api-worker/schema.sql
+```
+
+Local (worker config):
+```bash
+npx wrangler d1 execute tres-finos-db \
+  --config cloudflare/api-worker/wrangler.toml \
+  --file cloudflare/api-worker/schema.sql
+```
+
+## 9) Production API Surface (Worker)
+
+### Core
+- `GET /health`
+- `GET /v1`
+
+### Organizations and Access
+- `GET/POST/PATCH /v1/organizations`
+- `GET/POST /v1/team-members`
+- `PATCH /v1/team-members/:id`
+
+### Treasury and Ledger
+- `GET /v1/dashboard/summary`
+- `GET /v1/dashboard/top-assets`
+- `GET/POST/PATCH /v1/wallets`
+- `GET/POST /v1/transactions`
+- `POST /v1/transactions/bulk`
+- `GET /v1/transactions/export`
+- `GET/POST /v1/transactions/:id/notes`
+- `GET/POST /v1/transactions/:id/splits`
+- `GET/POST /v1/transaction-groups`
+- `POST /v1/cost-basis/calculate`
+
+### Reconciliation and Reports
+- `GET/POST/PATCH /v1/reconciliations`
+- `POST /v1/reconciliations/auto-run`
+- `GET/POST /v1/reports`
+- `GET /v1/reports/:id`
+- `POST /v1/reports/:id/run`
+
+### Automation and Integrations
+- `GET/POST/PATCH /v1/alerts`
+- `GET/POST/PATCH /v1/rules`
+- `GET/POST /v1/webhooks`
+- `PATCH /v1/webhooks/:id`
+- `GET /v1/webhooks/:id/events`
+- `POST /v1/webhooks/:id/test`
+- `GET/POST /v1/integrations/erp`
+- `POST /v1/integrations/erp/:id/sync`
+
+## 10) Deployment Runbook (Safe Sequence)
+
+1. Lint/build first:
+   - `npm run lint`
+   - `npm run build`
+2. If schema changed, apply D1 schema remotely.
+3. Deploy API Worker.
+4. Build/deploy web.
+5. Smoke check:
+   - open `https://tres-finos.pages.dev`
+   - verify API health badge updates to connected
+6. Push code and note deployed URLs in commit/PR notes.
+
+## 11) Known Caveats
+
+- Pages deploy may occasionally return a temporary internal error on first try; rerun deploy.
+- In restricted environments, DNS resolution for `workers.dev` domains can fail (`ENOTFOUND`), which may break API tests even when deployment is correct.
+- `next lint` is currently used and prints a deprecation warning for Next.js 16 migration.
+
+## 12) How To Continue Seamlessly (Suggested Next Milestones)
+
+1. Split monolithic Worker routes into modules (`routes/`, `services/`, `repositories/`) for maintainability.
+2. Add auth + tenant isolation middleware (JWT/session + org scoping).
+3. Expand reconciliation matching logic beyond status-based heuristics.
+4. Add persistent job execution for long-running report generation.
+5. Add API contract tests and deterministic seed fixtures for e2e.
+6. Implement dedicated pages/routes in web app beyond single-page console.
+
+## 13) UX/UI Notes
+
+- Design source of truth for current visual direction: `UXUI Blueprint.md`
+- Implemented UI mapping:
+  - Shell/navigation/modules: `apps/web/app/page.tsx`
+  - Design tokens/background/motion: `apps/web/app/globals.css`
+
+---
+
+If you are onboarding a new engineer, ask them to run sections **5, 8, and 10** first.
