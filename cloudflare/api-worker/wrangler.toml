@@ -1,0 +1,9 @@
+name = "tres-finos-api"
+main = "src/index.ts"
+compatibility_date = "2026-02-17"
+workers_dev = true
+
+[[d1_databases]]
+binding = "tres_finos_db"
+database_name = "tres-finos-db"
+database_id = "48df785a-e1ca-404c-849b-e82a646ee27b"

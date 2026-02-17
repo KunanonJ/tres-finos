@@ -1,0 +1,32 @@
+{
+  "name": "tres-finos-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=24 <26",
+    "npm": ">=11"
+  },
+  "scripts": {
+    "dev": "concurrently -n api,web -c cyan,magenta \"npm run dev -w @tres/api\" \"npm run dev -w @tres/web\"",
+    "build": "npm run build -w @tres/api && npm run build -w @tres/web",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "format": "prettier --write .",
+    "db:generate": "npm run prisma:generate -w @tres/api",
+    "db:migrate": "npm run prisma:migrate -w @tres/api",
+    "deploy:api:cf": "npx wrangler deploy --config cloudflare/api-worker/wrangler.toml",
+    "deploy:web:cf": "npm run build -w @tres/web && npx wrangler pages deploy apps/web/out --project-name=tres-finos --branch=main --commit-dirty=true",
+    "deploy:cf": "npm run deploy:api:cf && npm run deploy:web:cf"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@types/node": "^24.3.0",
+    "concurrently": "^9.2.0",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.2"
+  }
+}

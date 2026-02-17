@@ -1,0 +1,2 @@
+CREATE DATABASE tres_finos;
+CREATE DATABASE temporal;

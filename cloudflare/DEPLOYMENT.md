@@ -1,0 +1,46 @@
+# Cloudflare Deployment Notes
+
+## Live Resources
+- Pages project: `tres-finos`
+- Pages URL: `https://tres-finos.pages.dev`
+- API Worker: `tres-finos-api`
+- API URL: `https://tres-finos-api.chameleon-finance.workers.dev`
+- D1 Database: `tres-finos-db`
+
+## Deployed Backend Shape
+The Cloudflare API worker currently exposes:
+- `GET /health`
+- `GET /v1`
+- `GET/POST /v1/organizations`
+- `GET/POST /v1/wallets`
+- `GET/POST /v1/transactions`
+- `GET/POST /v1/reconciliations`
+
+## Redeploy Commands
+From repo root:
+
+```bash
+npm run deploy:api:cf
+npm run deploy:web:cf
+# or both
+npm run deploy:cf
+```
+
+## D1 Schema Management
+Apply schema updates:
+
+```bash
+CLOUDFLARE_ACCOUNT_ID=<your_account_id> \
+  npx wrangler d1 execute tres-finos-db --remote --file cloudflare/api-worker/schema.sql
+```
+
+## Custom Domain (Pages)
+This Wrangler version does not support custom-domain operations for Pages directly.
+Use Cloudflare Dashboard:
+
+1. Go to **Workers & Pages** -> **tres-finos**.
+2. Open **Custom domains**.
+3. Add your desired domain/subdomain.
+4. Confirm DNS records (Cloudflare will provide required records).
+
+After DNS propagates, your custom domain will point to the Pages deployment.

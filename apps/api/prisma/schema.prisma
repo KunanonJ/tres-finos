@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TxDirection {
+  IN
+  OUT
+  INTERNAL
+}
+
+enum TxStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+}
+
+enum ReconciliationStatus {
+  DRAFT
+  COMPLETED
+  FAILED
+}
+
+model Organization {
+  id               String               @id @default(cuid())
+  name             String
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  wallets          Wallet[]
+  transactions     LedgerTransaction[]
+  reconciliations  ReconciliationRun[]
+}
+
+model Wallet {
+  id             String              @id @default(cuid())
+  organizationId String
+  chain          String
+  address        String
+  label          String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  transactions   LedgerTransaction[]
+
+  @@index([organizationId])
+  @@unique([chain, address])
+}
+
+model LedgerTransaction {
+  id                String          @id @default(cuid())
+  organizationId    String
+  walletId          String
+  txHash            String
+  chain             String
+  tokenSymbol       String?
+  tokenAddress      String?
+  amountDecimal     Decimal         @db.Decimal(36, 18)
+  fiatValueUsd      Decimal?        @db.Decimal(24, 8)
+  costBasisUsd      Decimal?        @db.Decimal(24, 8)
+  direction         TxDirection
+  status            TxStatus        @default(CONFIRMED)
+  occurredAt        DateTime
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  organization      Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  wallet            Wallet          @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, occurredAt])
+  @@index([walletId, occurredAt])
+  @@unique([chain, txHash, walletId])
+}
+
+model ReconciliationRun {
+  id               String                @id @default(cuid())
+  organizationId   String
+  periodStart      DateTime
+  periodEnd        DateTime
+  status           ReconciliationStatus  @default(DRAFT)
+  discrepancyCount Int                   @default(0)
+  notes            String?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  organization     Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, periodStart, periodEnd])
+}
