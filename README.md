@@ -56,3 +56,6 @@ PRD-driven implementation workspace for TRES FinOS.
 The platform now includes end-to-end implementation for core PRD modules:
 ledger, dashboard summary, reconciliation, reporting, alerts/rules automation,
 cost-basis workflows, RBAC collaboration, webhook routing, and ERP sync scaffolding.
+
+UX/UI design blueprint reference:
+- `UXUI Blueprint.md`

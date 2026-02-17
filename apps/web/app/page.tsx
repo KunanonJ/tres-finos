@@ -895,27 +895,56 @@ export default function HomePage() {
     window.open(target, "_blank", "noopener,noreferrer");
   }, [apiBaseUrl, selectedOrganizationId]);
 
+  const quickNav = [
+    { label: "Overview", href: "#overview" },
+    { label: "Ledger", href: "#ledger" },
+    { label: "Reconciliation", href: "#reconciliation" },
+    { label: "Reporting", href: "#reporting" },
+    { label: "Governance", href: "#governance" },
+    { label: "Automation", href: "#automation" }
+  ];
+
   return (
-    <main className="mx-auto min-h-screen max-w-7xl px-6 py-10">
-      <header className="mb-8 rounded-2xl border border-slate-200 bg-white/70 p-6 shadow-sm backdrop-blur">
+    <main className="ops-shell mx-auto min-h-screen max-w-7xl px-6 py-10">
+      <header className="hero-panel mb-8 rounded-2xl border border-slate-200 bg-white/70 p-6 shadow-sm backdrop-blur">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="mb-2 text-sm uppercase tracking-[0.2em] text-slate-600">TRES FinOS</p>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.24em] text-slate-600">
+              TRES FinOS
+            </p>
             <h1 className="text-3xl font-semibold text-ink">Web3 Finance Operations Console</h1>
             <p className="mt-2 max-w-3xl text-sm text-slate-700">
               Expanded PRD scope foundation: contextual ledger, reconciliations, reports,
               alerts/rules automation, cost-basis workflows, RBAC collaboration, webhooks, and ERP integrations.
             </p>
+            <p className="mt-3 inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-800">
+              UX/UI Blueprint v1
+            </p>
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+          <div className="status-pill rounded-xl border border-slate-200 bg-white px-4 py-3">
             <p className="text-xs uppercase tracking-wide text-slate-500">API Status</p>
             <p className="text-lg font-semibold text-ink">{health.status}</p>
             <p className="text-xs text-slate-500">{health.detail}</p>
           </div>
         </div>
+
+        <nav className="module-nav mt-5 flex flex-wrap gap-2">
+          {quickNav.map((item) => (
+            <a
+              key={item.href}
+              href={item.href}
+              className="module-link rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-slate-700"
+            >
+              {item.label}
+            </a>
+          ))}
+        </nav>
       </header>
 
-      <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <section
+        id="overview"
+        className="module-panel mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+      >
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-600">
           Organization Context
         </h2>
@@ -952,35 +981,35 @@ export default function HomePage() {
       {selectedOrganizationId ? (
         <>
           <section className="mb-6 grid gap-4 md:grid-cols-6">
-            <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <article className="metric-tile rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
               <p className="text-xs text-slate-500">Wallets</p>
               <p className="text-2xl font-semibold text-ink">{dashboardSummary?.walletCount ?? 0}</p>
             </article>
-            <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <article className="metric-tile rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
               <p className="text-xs text-slate-500">Transactions (30d)</p>
               <p className="text-2xl font-semibold text-ink">
                 {dashboardSummary?.transactionCount ?? 0}
               </p>
             </article>
-            <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <article className="metric-tile rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
               <p className="text-xs text-slate-500">Inflow</p>
               <p className="text-2xl font-semibold text-signal">
                 {fmtUsd(dashboardSummary?.inflowUsd)}
               </p>
             </article>
-            <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <article className="metric-tile rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
               <p className="text-xs text-slate-500">Outflow</p>
               <p className="text-2xl font-semibold text-alert">
                 {fmtUsd(dashboardSummary?.outflowUsd)}
               </p>
             </article>
-            <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <article className="metric-tile rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
               <p className="text-xs text-slate-500">Net Flow</p>
               <p className="text-2xl font-semibold text-ink">
                 {fmtUsd(dashboardSummary?.netFlowUsd)}
               </p>
             </article>
-            <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <article className="metric-tile rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
               <p className="text-xs text-slate-500">Open Recon</p>
               <p className="text-2xl font-semibold text-ink">
                 {dashboardSummary?.openReconciliationCount ?? 0}
@@ -988,8 +1017,8 @@ export default function HomePage() {
             </article>
           </section>
 
-          <section className="mb-6 grid gap-6 lg:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <section id="reporting" className="mb-6 grid gap-6 lg:grid-cols-2">
+            <div className="module-panel rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-600">
                 Top Asset Positions
               </h3>
@@ -1024,7 +1053,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="module-panel rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-600">
                 Wallets
               </h3>
@@ -1101,7 +1130,10 @@ export default function HomePage() {
             </div>
           </section>
 
-          <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <section
+            id="ledger"
+            className="module-panel mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+          >
             <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-600">
               Contextual Ledger
             </h3>
@@ -1328,8 +1360,8 @@ export default function HomePage() {
             </div>
           </section>
 
-          <section className="mb-6 grid gap-6 lg:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <section id="reconciliation" className="mb-6 grid gap-6 lg:grid-cols-2">
+            <div className="module-panel rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-600">
                 Reconciliation Engine
               </h3>
@@ -1407,7 +1439,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="module-panel rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-600">
                 Report Center
               </h3>
@@ -1470,8 +1502,8 @@ export default function HomePage() {
             </div>
           </section>
 
-          <section className="mb-6 grid gap-6 lg:grid-cols-3">
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <section id="governance" className="mb-6 grid gap-6 lg:grid-cols-3">
+            <div className="module-panel rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-600">
                 Cost Basis Lab
               </h3>
@@ -1523,7 +1555,7 @@ export default function HomePage() {
               )}
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="module-panel rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-600">
                 Team Access (RBAC)
               </h3>
@@ -1572,7 +1604,7 @@ export default function HomePage() {
               </ul>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="module-panel rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-600">
                 Webhook Routing
               </h3>
@@ -1630,8 +1662,8 @@ export default function HomePage() {
             </div>
           </section>
 
-          <section className="mb-6 grid gap-6 lg:grid-cols-3">
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <section id="automation" className="mb-6 grid gap-6 lg:grid-cols-3">
+            <div className="module-panel rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-600">
                 Alerts
               </h3>
@@ -1685,7 +1717,7 @@ export default function HomePage() {
               </ul>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="module-panel rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-600">
                 Automation Rules
               </h3>
@@ -1748,7 +1780,7 @@ export default function HomePage() {
               </ul>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="module-panel rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-600">
                 ERP Integrations
               </h3>
@@ -1796,12 +1828,12 @@ export default function HomePage() {
           </section>
         </>
       ) : (
-        <section className="rounded-2xl border border-dashed border-slate-300 bg-white/60 p-8 text-center text-slate-600">
+        <section className="module-panel module-empty rounded-2xl border border-dashed border-slate-300 bg-white/60 p-8 text-center text-slate-600">
           Create or select an organization to start building your financial operating model.
         </section>
       )}
 
-      <footer className="mt-10 text-xs text-slate-500">
+      <footer className="ops-footer mt-10 text-xs text-slate-500">
         {loading ? "Processing request..." : "Ready"} · API Base: {apiBaseUrl}
       </footer>
     </main>
