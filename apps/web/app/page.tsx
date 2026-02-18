@@ -145,11 +145,118 @@ type CostBasisSummary = {
   sampleSize: number;
 };
 
+type ContactItem = {
+  id: string;
+  name: string;
+  email: string | null;
+  wallet_address: string | null;
+  counterparty_type: string;
+  status: string;
+  notes: string | null;
+  created_at: string;
+};
+
+type CustodianItem = {
+  id: string;
+  name: string;
+  provider_type: string;
+  account_reference: string | null;
+  status: string;
+  last_sync_at: string | null;
+};
+
+type UnidentifiedAddressItem = {
+  id: string;
+  chain: string;
+  address: string;
+  label: string | null;
+  status: string;
+  last_seen_at: string | null;
+};
+
+type AssetInventoryItem = {
+  token_symbol: string;
+  chain: string;
+  asset_class: string;
+  wallet_count: number;
+  quantity_sum: number;
+  value_usd_sum: number;
+  latest_snapshot_at: string;
+};
+
+type PositionItem = {
+  id: string;
+  wallet_id: string | null;
+  token_symbol: string;
+  asset_class: string;
+  quantity_decimal: string;
+  cost_basis_usd: string | null;
+  market_value_usd: string | null;
+  reconciliation_status: string;
+  is_zero_balance: number;
+  as_of: string;
+  wallet_chain: string | null;
+  wallet_address: string | null;
+};
+
+type InvoiceItem = {
+  id: string;
+  customer_name: string;
+  invoice_number: string | null;
+  amount_usd: string;
+  status: string;
+  due_date: string | null;
+  issued_at: string | null;
+};
+
+type BillItem = {
+  id: string;
+  vendor_name: string;
+  bill_number: string | null;
+  amount_usd: string;
+  status: string;
+  due_date: string | null;
+  issued_at: string | null;
+};
+
+type PublishedReport = {
+  id: string;
+  report_id: string;
+  title: string;
+  report_type: string;
+  visibility: string;
+  published_by: string | null;
+  published_at: string;
+  status: string;
+};
+
+type FrameworkCaseItem = {
+  id: string;
+  framework_code: string;
+  title: string;
+  status: string;
+  due_date: string | null;
+  owner: string | null;
+  created_at: string;
+};
+
+type FrameworkCatalogItem = {
+  code: string;
+  name: string;
+  status: string;
+};
+
 function fmtUsd(value: number | null | undefined): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
     maximumFractionDigits: 2
+  }).format(value ?? 0);
+}
+
+function fmtNumber(value: number | null | undefined, maxFractionDigits = 4): string {
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: maxFractionDigits
   }).format(value ?? 0);
 }
 
@@ -214,6 +321,22 @@ export default function HomePage() {
   const [selectedTransactionId, setSelectedTransactionId] = useState<string>("");
   const [transactionNotes, setTransactionNotes] = useState<TransactionNote[]>([]);
   const [costBasisSummary, setCostBasisSummary] = useState<CostBasisSummary | null>(null);
+  const [contacts, setContacts] = useState<ContactItem[]>([]);
+  const [custodians, setCustodians] = useState<CustodianItem[]>([]);
+  const [unidentifiedAddresses, setUnidentifiedAddresses] = useState<UnidentifiedAddressItem[]>([]);
+  const [assetInventory, setAssetInventory] = useState<AssetInventoryItem[]>([]);
+  const [positions, setPositions] = useState<PositionItem[]>([]);
+  const [showZeroPositions, setShowZeroPositions] = useState<boolean>(false);
+  const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
+  const [bills, setBills] = useState<BillItem[]>([]);
+  const [publishedReports, setPublishedReports] = useState<PublishedReport[]>([]);
+  const [xeroConnections, setXeroConnections] = useState<ErpConnection[]>([]);
+  const [quickbooksConnections, setQuickbooksConnections] = useState<ErpConnection[]>([]);
+  const [frameworkCases1099, setFrameworkCases1099] = useState<FrameworkCaseItem[]>([]);
+  const [frameworkCatalog, setFrameworkCatalog] = useState<FrameworkCatalogItem[]>([]);
+  const [ledgerTab, setLedgerTab] = useState<
+    "TRANSACTIONS" | "COST_BASIS" | "ROLL_FORWARD" | "TRIAL_BALANCE"
+  >("TRANSACTIONS");
 
   const [orgName, setOrgName] = useState<string>("");
   const [walletForm, setWalletForm] = useState({
@@ -297,6 +420,66 @@ export default function HomePage() {
   const [costBasisForm, setCostBasisForm] = useState({
     tokenSymbol: "USDC",
     method: "FIFO"
+  });
+
+  const [contactForm, setContactForm] = useState({
+    name: "",
+    email: "",
+    walletAddress: "",
+    counterpartyType: "EXTERNAL"
+  });
+
+  const [custodianForm, setCustodianForm] = useState({
+    name: "",
+    providerType: "CUSTODY",
+    accountReference: ""
+  });
+
+  const [unidentifiedForm, setUnidentifiedForm] = useState({
+    chain: "ethereum",
+    address: "",
+    label: ""
+  });
+
+  const [positionForm, setPositionForm] = useState({
+    walletId: "",
+    tokenSymbol: "USDC",
+    assetClass: "TOKEN",
+    quantityDecimal: "",
+    costBasisUsd: "",
+    marketValueUsd: "",
+    reconciliationStatus: "PENDING"
+  });
+
+  const [invoiceForm, setInvoiceForm] = useState({
+    customerName: "",
+    invoiceNumber: "",
+    amountUsd: "",
+    status: "DRAFT",
+    dueDate: ""
+  });
+
+  const [billForm, setBillForm] = useState({
+    vendorName: "",
+    billNumber: "",
+    amountUsd: "",
+    status: "OPEN",
+    dueDate: ""
+  });
+
+  const [xeroForm, setXeroForm] = useState({
+    configJson: '{"mode":"balances_only"}'
+  });
+
+  const [quickbooksForm, setQuickbooksForm] = useState({
+    configJson: '{"mode":"full_transactions"}'
+  });
+
+  const [frameworkForm, setFrameworkForm] = useState({
+    title: "",
+    dueDate: "",
+    owner: "",
+    status: "OPEN"
   });
 
   const apiGet = useCallback(
@@ -388,11 +571,23 @@ export default function HomePage() {
           txData,
           reconData,
           reportData,
+          publishedReportData,
           alertData,
           ruleData,
           erpData,
+          xeroData,
+          quickbooksData,
           teamData,
-          webhookData
+          webhookData,
+          contactData,
+          custodianData,
+          unidentifiedData,
+          assetInventoryData,
+          positionData,
+          invoiceData,
+          billData,
+          frameworkCaseData,
+          frameworkCatalogData
         ] =
           await Promise.all([
             apiGet<{ summary: DashboardSummary }>(
@@ -407,15 +602,45 @@ export default function HomePage() {
               `/v1/reconciliations?organizationId=${organizationId}&limit=20`
             ),
             apiGet<{ items: ReportItem[] }>(`/v1/reports?organizationId=${organizationId}&limit=20`),
+            apiGet<{ items: PublishedReport[] }>(
+              `/v1/reports/published?organizationId=${organizationId}&limit=20`
+            ),
             apiGet<{ items: AlertItem[] }>(`/v1/alerts?organizationId=${organizationId}&limit=20`),
             apiGet<{ items: RuleItem[] }>(`/v1/rules?organizationId=${organizationId}&limit=20`),
             apiGet<{ items: ErpConnection[] }>(
               `/v1/integrations/erp?organizationId=${organizationId}&limit=20`
             ),
+            apiGet<{ items: ErpConnection[] }>(
+              `/v1/integrations/xero?organizationId=${organizationId}&limit=20`
+            ),
+            apiGet<{ items: ErpConnection[] }>(
+              `/v1/integrations/quickbooks?organizationId=${organizationId}&limit=20`
+            ),
             apiGet<{ items: TeamMember[] }>(`/v1/team-members?organizationId=${organizationId}&limit=50`),
             apiGet<{ items: WebhookSubscription[] }>(
               `/v1/webhooks?organizationId=${organizationId}&limit=50`
-            )
+            ),
+            apiGet<{ items: ContactItem[] }>(
+              `/v1/accounts/contacts?organizationId=${organizationId}&limit=100`
+            ),
+            apiGet<{ items: CustodianItem[] }>(
+              `/v1/accounts/custodians?organizationId=${organizationId}&limit=100`
+            ),
+            apiGet<{ items: UnidentifiedAddressItem[] }>(
+              `/v1/accounts/unidentified-addresses?organizationId=${organizationId}&limit=100`
+            ),
+            apiGet<{ items: AssetInventoryItem[] }>(`/v1/assets?organizationId=${organizationId}&limit=100`),
+            apiGet<{ items: PositionItem[] }>(
+              `/v1/positions?organizationId=${organizationId}&showZero=${showZeroPositions ? "true" : "false"}&limit=200`
+            ),
+            apiGet<{ items: InvoiceItem[] }>(
+              `/v1/payments/invoices?organizationId=${organizationId}&limit=100`
+            ),
+            apiGet<{ items: BillItem[] }>(`/v1/payments/bills?organizationId=${organizationId}&limit=100`),
+            apiGet<{ items: FrameworkCaseItem[] }>(
+              `/v1/frameworks/1099?organizationId=${organizationId}&limit=100`
+            ),
+            apiGet<{ items: FrameworkCatalogItem[] }>(`/v1/frameworks/catalog`)
           ]);
 
         setDashboardSummary(summary.summary);
@@ -424,14 +649,29 @@ export default function HomePage() {
         setTransactions(txData.items ?? []);
         setReconciliations(reconData.items ?? []);
         setReports(reportData.items ?? []);
+        setPublishedReports(publishedReportData.items ?? []);
         setAlerts(alertData.items ?? []);
         setRules(ruleData.items ?? []);
         setErpConnections(erpData.items ?? []);
+        setXeroConnections(xeroData.items ?? []);
+        setQuickbooksConnections(quickbooksData.items ?? []);
         setTeamMembers(teamData.items ?? []);
         setWebhooks(webhookData.items ?? []);
+        setContacts(contactData.items ?? []);
+        setCustodians(custodianData.items ?? []);
+        setUnidentifiedAddresses(unidentifiedData.items ?? []);
+        setAssetInventory(assetInventoryData.items ?? []);
+        setPositions(positionData.items ?? []);
+        setInvoices(invoiceData.items ?? []);
+        setBills(billData.items ?? []);
+        setFrameworkCases1099(frameworkCaseData.items ?? []);
+        setFrameworkCatalog(frameworkCatalogData.items ?? []);
 
         if (!txForm.walletId && walletData.items?.length) {
           setTxForm((prev) => ({ ...prev, walletId: walletData.items[0].id }));
+        }
+        if (!positionForm.walletId && walletData.items?.length) {
+          setPositionForm((prev) => ({ ...prev, walletId: walletData.items[0].id }));
         }
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : "Failed loading organization data");
@@ -439,7 +679,15 @@ export default function HomePage() {
         setLoading(false);
       }
     },
-    [apiGet, txFilters.direction, txFilters.minUsd, txFilters.search, txForm.walletId]
+    [
+      apiGet,
+      positionForm.walletId,
+      showZeroPositions,
+      txFilters.direction,
+      txFilters.minUsd,
+      txFilters.search,
+      txForm.walletId
+    ]
   );
 
   const loadTransactionNotes = useCallback(
@@ -887,6 +1135,355 @@ export default function HomePage() {
     }
   }, [apiPost, costBasisForm.method, costBasisForm.tokenSymbol, selectedOrganizationId]);
 
+  const handleCreateContact = useCallback(async () => {
+    if (!selectedOrganizationId || !contactForm.name.trim()) {
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      await apiPost("/v1/accounts/contacts", {
+        organizationId: selectedOrganizationId,
+        name: contactForm.name.trim(),
+        email: contactForm.email.trim() || null,
+        walletAddress: contactForm.walletAddress.trim() || null,
+        counterpartyType: contactForm.counterpartyType
+      });
+      setContactForm((prev) => ({ ...prev, name: "", email: "", walletAddress: "" }));
+      await loadOrganizationData(selectedOrganizationId);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Failed creating contact");
+    } finally {
+      setLoading(false);
+    }
+  }, [apiPost, contactForm, loadOrganizationData, selectedOrganizationId]);
+
+  const handleUpdateContactStatus = useCallback(
+    async (contactId: string, status: string) => {
+      try {
+        await apiPatch(`/v1/accounts/contacts/${contactId}`, { status });
+        if (selectedOrganizationId) {
+          await loadOrganizationData(selectedOrganizationId);
+        }
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : "Failed updating contact");
+      }
+    },
+    [apiPatch, loadOrganizationData, selectedOrganizationId]
+  );
+
+  const handleCreateCustodian = useCallback(async () => {
+    if (!selectedOrganizationId || !custodianForm.name.trim()) {
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      await apiPost("/v1/accounts/custodians", {
+        organizationId: selectedOrganizationId,
+        name: custodianForm.name.trim(),
+        providerType: custodianForm.providerType,
+        accountReference: custodianForm.accountReference.trim() || null
+      });
+      setCustodianForm((prev) => ({ ...prev, name: "", accountReference: "" }));
+      await loadOrganizationData(selectedOrganizationId);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Failed creating custodian");
+    } finally {
+      setLoading(false);
+    }
+  }, [apiPost, custodianForm, loadOrganizationData, selectedOrganizationId]);
+
+  const handleUpdateCustodianStatus = useCallback(
+    async (custodianId: string, status: string) => {
+      try {
+        await apiPatch(`/v1/accounts/custodians/${custodianId}`, { status });
+        if (selectedOrganizationId) {
+          await loadOrganizationData(selectedOrganizationId);
+        }
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : "Failed updating custodian");
+      }
+    },
+    [apiPatch, loadOrganizationData, selectedOrganizationId]
+  );
+
+  const handleCreateUnidentifiedAddress = useCallback(async () => {
+    if (!selectedOrganizationId || !unidentifiedForm.chain.trim() || !unidentifiedForm.address.trim()) {
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      await apiPost("/v1/accounts/unidentified-addresses", {
+        organizationId: selectedOrganizationId,
+        chain: unidentifiedForm.chain.trim(),
+        address: unidentifiedForm.address.trim(),
+        label: unidentifiedForm.label.trim() || null
+      });
+      setUnidentifiedForm((prev) => ({ ...prev, address: "", label: "" }));
+      await loadOrganizationData(selectedOrganizationId);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Failed creating unidentified address");
+    } finally {
+      setLoading(false);
+    }
+  }, [apiPost, loadOrganizationData, selectedOrganizationId, unidentifiedForm]);
+
+  const handleResolveUnidentifiedAddress = useCallback(
+    async (item: UnidentifiedAddressItem) => {
+      try {
+        await apiPatch(`/v1/accounts/unidentified-addresses/${item.id}`, {
+          status: "RESOLVED",
+          label: item.label || "Labeled Address"
+        });
+        if (selectedOrganizationId) {
+          await loadOrganizationData(selectedOrganizationId);
+        }
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : "Failed updating unidentified address");
+      }
+    },
+    [apiPatch, loadOrganizationData, selectedOrganizationId]
+  );
+
+  const handleCreatePosition = useCallback(async () => {
+    if (!selectedOrganizationId || !positionForm.tokenSymbol.trim() || !positionForm.quantityDecimal) {
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      await apiPost("/v1/positions", {
+        organizationId: selectedOrganizationId,
+        walletId: positionForm.walletId || null,
+        tokenSymbol: positionForm.tokenSymbol.trim(),
+        assetClass: positionForm.assetClass,
+        quantityDecimal: positionForm.quantityDecimal,
+        costBasisUsd: positionForm.costBasisUsd || null,
+        marketValueUsd: positionForm.marketValueUsd || null,
+        reconciliationStatus: positionForm.reconciliationStatus,
+        asOf: new Date().toISOString()
+      });
+      setPositionForm((prev) => ({
+        ...prev,
+        quantityDecimal: "",
+        costBasisUsd: "",
+        marketValueUsd: ""
+      }));
+      await loadOrganizationData(selectedOrganizationId);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Failed creating position");
+    } finally {
+      setLoading(false);
+    }
+  }, [apiPost, loadOrganizationData, positionForm, selectedOrganizationId]);
+
+  const handleUpdatePositionStatus = useCallback(
+    async (positionId: string, reconciliationStatus: string) => {
+      try {
+        await apiPatch(`/v1/positions/${positionId}`, { reconciliationStatus });
+        if (selectedOrganizationId) {
+          await loadOrganizationData(selectedOrganizationId);
+        }
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : "Failed updating position");
+      }
+    },
+    [apiPatch, loadOrganizationData, selectedOrganizationId]
+  );
+
+  const handleCreateInvoice = useCallback(async () => {
+    if (!selectedOrganizationId || !invoiceForm.customerName.trim() || !invoiceForm.amountUsd) {
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      await apiPost("/v1/payments/invoices", {
+        organizationId: selectedOrganizationId,
+        customerName: invoiceForm.customerName.trim(),
+        invoiceNumber: invoiceForm.invoiceNumber.trim() || null,
+        amountUsd: invoiceForm.amountUsd,
+        status: invoiceForm.status,
+        dueDate: invoiceForm.dueDate || null
+      });
+      setInvoiceForm((prev) => ({ ...prev, customerName: "", invoiceNumber: "", amountUsd: "" }));
+      await loadOrganizationData(selectedOrganizationId);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Failed creating invoice");
+    } finally {
+      setLoading(false);
+    }
+  }, [apiPost, invoiceForm, loadOrganizationData, selectedOrganizationId]);
+
+  const handleCreateBill = useCallback(async () => {
+    if (!selectedOrganizationId || !billForm.vendorName.trim() || !billForm.amountUsd) {
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      await apiPost("/v1/payments/bills", {
+        organizationId: selectedOrganizationId,
+        vendorName: billForm.vendorName.trim(),
+        billNumber: billForm.billNumber.trim() || null,
+        amountUsd: billForm.amountUsd,
+        status: billForm.status,
+        dueDate: billForm.dueDate || null
+      });
+      setBillForm((prev) => ({ ...prev, vendorName: "", billNumber: "", amountUsd: "" }));
+      await loadOrganizationData(selectedOrganizationId);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Failed creating bill");
+    } finally {
+      setLoading(false);
+    }
+  }, [apiPost, billForm, loadOrganizationData, selectedOrganizationId]);
+
+  const handleSetInvoiceStatus = useCallback(
+    async (invoiceId: string, status: string) => {
+      try {
+        await apiPatch(`/v1/payments/invoices/${invoiceId}`, { status });
+        if (selectedOrganizationId) {
+          await loadOrganizationData(selectedOrganizationId);
+        }
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : "Failed updating invoice");
+      }
+    },
+    [apiPatch, loadOrganizationData, selectedOrganizationId]
+  );
+
+  const handleSetBillStatus = useCallback(
+    async (billId: string, status: string) => {
+      try {
+        await apiPatch(`/v1/payments/bills/${billId}`, { status });
+        if (selectedOrganizationId) {
+          await loadOrganizationData(selectedOrganizationId);
+        }
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : "Failed updating bill");
+      }
+    },
+    [apiPatch, loadOrganizationData, selectedOrganizationId]
+  );
+
+  const handlePublishReport = useCallback(
+    async (reportId: string) => {
+      setLoading(true);
+      setError("");
+      try {
+        await apiPost(`/v1/reports/${reportId}/publish`, {
+          visibility: "INTERNAL",
+          publishedBy: "web-console"
+        });
+        if (selectedOrganizationId) {
+          await loadOrganizationData(selectedOrganizationId);
+        }
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : "Failed publishing report");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [apiPost, loadOrganizationData, selectedOrganizationId]
+  );
+
+  const handleCreateXeroConnection = useCallback(async () => {
+    if (!selectedOrganizationId) {
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      await apiPost("/v1/integrations/xero", {
+        organizationId: selectedOrganizationId,
+        config: parseJsonInput(xeroForm.configJson, {}),
+        status: "CONNECTED"
+      });
+      await loadOrganizationData(selectedOrganizationId);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Failed connecting Xero");
+    } finally {
+      setLoading(false);
+    }
+  }, [apiPost, loadOrganizationData, selectedOrganizationId, xeroForm.configJson]);
+
+  const handleCreateQuickbooksConnection = useCallback(async () => {
+    if (!selectedOrganizationId) {
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      await apiPost("/v1/integrations/quickbooks", {
+        organizationId: selectedOrganizationId,
+        config: parseJsonInput(quickbooksForm.configJson, {}),
+        status: "CONNECTED"
+      });
+      await loadOrganizationData(selectedOrganizationId);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Failed connecting QuickBooks");
+    } finally {
+      setLoading(false);
+    }
+  }, [apiPost, loadOrganizationData, quickbooksForm.configJson, selectedOrganizationId]);
+
+  const handleMarkIntegrationSynced = useCallback(
+    async (provider: "xero" | "quickbooks", connectionId: string) => {
+      try {
+        await apiPatch(`/v1/integrations/${provider}/${connectionId}`, {
+          status: "SYNCED",
+          lastSyncAt: new Date().toISOString()
+        });
+        if (selectedOrganizationId) {
+          await loadOrganizationData(selectedOrganizationId);
+        }
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : "Failed updating integration sync status");
+      }
+    },
+    [apiPatch, loadOrganizationData, selectedOrganizationId]
+  );
+
+  const handleCreateFrameworkCase = useCallback(async () => {
+    if (!selectedOrganizationId || !frameworkForm.title.trim()) {
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      await apiPost("/v1/frameworks/1099", {
+        organizationId: selectedOrganizationId,
+        title: frameworkForm.title.trim(),
+        dueDate: frameworkForm.dueDate || null,
+        owner: frameworkForm.owner.trim() || null,
+        status: frameworkForm.status
+      });
+      setFrameworkForm((prev) => ({ ...prev, title: "", dueDate: "", owner: "" }));
+      await loadOrganizationData(selectedOrganizationId);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Failed creating framework case");
+    } finally {
+      setLoading(false);
+    }
+  }, [apiPost, frameworkForm, loadOrganizationData, selectedOrganizationId]);
+
+  const handleUpdateFrameworkCaseStatus = useCallback(
+    async (caseId: string, status: string) => {
+      try {
+        await apiPatch(`/v1/frameworks/1099/${caseId}`, { status });
+        if (selectedOrganizationId) {
+          await loadOrganizationData(selectedOrganizationId);
+        }
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : "Failed updating framework case");
+      }
+    },
+    [apiPatch, loadOrganizationData, selectedOrganizationId]
+  );
+
   const handleExportTransactions = useCallback(() => {
     if (!selectedOrganizationId) {
       return;
@@ -897,12 +1494,89 @@ export default function HomePage() {
 
   const quickNav = [
     { label: "Overview", href: "#overview" },
+    { label: "Accounts", href: "#accounts" },
+    { label: "Assets", href: "#assets" },
+    { label: "Positions", href: "#positions" },
+    { label: "Payments", href: "#payments" },
     { label: "Ledger", href: "#ledger" },
     { label: "Reconciliation", href: "#reconciliation" },
     { label: "Reporting", href: "#reporting" },
+    { label: "Integrations", href: "#integrations" },
+    { label: "Frameworks", href: "#frameworks" },
     { label: "Governance", href: "#governance" },
     { label: "Automation", href: "#automation" }
   ];
+
+  const netWorthSeries = useMemo(() => {
+    const byDay = new Map<string, number>();
+    for (const transaction of transactions) {
+      const dayKey = new Date(transaction.occurred_at).toISOString().slice(0, 10);
+      const current = byDay.get(dayKey) ?? 0;
+      byDay.set(dayKey, current + Number(transaction.fiat_value_usd || 0));
+    }
+
+    let cumulative = 0;
+    return Array.from(byDay.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, value]) => {
+        cumulative += value;
+        return { date, value: cumulative };
+      });
+  }, [transactions]);
+
+  const networkExposure = useMemo(() => {
+    const totals = new Map<string, number>();
+    for (const transaction of transactions) {
+      const key = transaction.chain || "unknown";
+      totals.set(key, (totals.get(key) ?? 0) + Number(transaction.fiat_value_usd || 0));
+    }
+    return Array.from(totals.entries())
+      .map(([chain, value]) => ({ chain, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [transactions]);
+
+  const recentActivity = useMemo(() => transactions.slice(0, 6), [transactions]);
+
+  const rollForwardRows = useMemo(() => {
+    const rows = new Map<string, { token: string; inflow: number; outflow: number }>();
+    for (const transaction of transactions) {
+      const token = transaction.token_symbol || "UNKNOWN";
+      if (!rows.has(token)) {
+        rows.set(token, { token, inflow: 0, outflow: 0 });
+      }
+      const record = rows.get(token)!;
+      const value = Number(transaction.fiat_value_usd || 0);
+      if (transaction.direction === "OUT") {
+        record.outflow += value;
+      } else {
+        record.inflow += value;
+      }
+    }
+    return Array.from(rows.values()).sort((a, b) => b.inflow - a.inflow);
+  }, [transactions]);
+
+  const trialBalanceRows = useMemo(() => {
+    return rollForwardRows.map((row) => ({
+      account: row.token,
+      debit: row.inflow,
+      credit: row.outflow,
+      net: row.inflow - row.outflow
+    }));
+  }, [rollForwardRows]);
+
+  const ledgerPivotRows = useMemo(() => {
+    const groups = new Map<string, { group: string; count: number; usd: number }>();
+    for (const transaction of transactions) {
+      const group = transaction.classification || transaction.direction || "UNCLASSIFIED";
+      if (!groups.has(group)) {
+        groups.set(group, { group, count: 0, usd: 0 });
+      }
+      const entry = groups.get(group)!;
+      entry.count += 1;
+      entry.usd += Number(transaction.fiat_value_usd || 0);
+    }
+    return Array.from(groups.values()).sort((a, b) => b.usd - a.usd);
+  }, [transactions]);
 
   return (
     <main className="ops-shell mx-auto min-h-screen max-w-7xl px-6 py-10">
@@ -1015,6 +1689,74 @@ export default function HomePage() {
                 {dashboardSummary?.openReconciliationCount ?? 0}
               </p>
             </article>
+          </section>
+
+          <section className="mb-6 grid gap-6 lg:grid-cols-3">
+            <div className="module-panel rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-600">
+                Net Worth Over Time
+              </h3>
+              <div className="max-h-56 overflow-auto rounded-lg border border-slate-200">
+                <table className="min-w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-slate-500">
+                      <th className="px-2 py-2">Date</th>
+                      <th className="px-2 py-2">Net Worth (Cumulative)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {netWorthSeries.map((point) => (
+                      <tr key={point.date} className="border-b border-slate-100">
+                        <td className="px-2 py-2">{point.date}</td>
+                        <td className="px-2 py-2">{fmtUsd(point.value)}</td>
+                      </tr>
+                    ))}
+                    {netWorthSeries.length === 0 && (
+                      <tr>
+                        <td className="px-2 py-2 text-slate-500" colSpan={2}>
+                          Create transactions to visualize trend data.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div className="module-panel rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-600">
+                Network Exposure
+              </h3>
+              <ul className="space-y-2 text-xs">
+                {networkExposure.map((item) => (
+                  <li
+                    key={item.chain}
+                    className="flex items-center justify-between rounded border border-slate-200 px-2 py-1.5"
+                  >
+                    <span className="font-medium uppercase">{item.chain}</span>
+                    <span>{fmtUsd(item.value)}</span>
+                  </li>
+                ))}
+                {networkExposure.length === 0 && (
+                  <li className="rounded border border-dashed border-slate-200 px-2 py-2 text-slate-500">
+                    No network exposure yet.
+                  </li>
+                )}
+              </ul>
+              <h4 className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Recent Activity
+              </h4>
+              <ul className="mt-2 space-y-2 text-xs">
+                {recentActivity.map((transaction) => (
+                  <li key={transaction.id} className="rounded border border-slate-200 px-2 py-2">
+                    <p className="font-medium">
+                      {transaction.token_symbol || "UNKNOWN"} {transaction.direction}{" "}
+                      {fmtNumber(Number(transaction.amount_decimal), 6)}
+                    </p>
+                    <p className="text-slate-500">{new Date(transaction.occurred_at).toLocaleString()}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </section>
 
           <section id="reporting" className="mb-6 grid gap-6 lg:grid-cols-2">
@@ -1130,6 +1872,515 @@ export default function HomePage() {
             </div>
           </section>
 
+          <section id="accounts" className="mb-6 grid gap-6 lg:grid-cols-3">
+            <div className="module-panel rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-600">
+                Contact Management
+              </h3>
+              <div className="grid gap-2">
+                <input
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  placeholder="Contact name"
+                  value={contactForm.name}
+                  onChange={(event) => setContactForm((prev) => ({ ...prev, name: event.target.value }))}
+                />
+                <input
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  placeholder="Email"
+                  value={contactForm.email}
+                  onChange={(event) => setContactForm((prev) => ({ ...prev, email: event.target.value }))}
+                />
+                <input
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  placeholder="Wallet address"
+                  value={contactForm.walletAddress}
+                  onChange={(event) =>
+                    setContactForm((prev) => ({ ...prev, walletAddress: event.target.value }))
+                  }
+                />
+                <select
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  value={contactForm.counterpartyType}
+                  onChange={(event) =>
+                    setContactForm((prev) => ({ ...prev, counterpartyType: event.target.value }))
+                  }
+                >
+                  <option value="EXTERNAL">EXTERNAL</option>
+                  <option value="INTERNAL">INTERNAL</option>
+                  <option value="VENDOR">VENDOR</option>
+                  <option value="CUSTOMER">CUSTOMER</option>
+                </select>
+                <button
+                  className="rounded-lg bg-slate px-4 py-2 text-sm font-medium text-white hover:bg-ink"
+                  onClick={() => void handleCreateContact()}
+                  disabled={loading}
+                >
+                  Add Contact
+                </button>
+              </div>
+              <ul className="mt-3 max-h-48 space-y-2 overflow-auto text-xs">
+                {contacts.map((contact) => (
+                  <li key={contact.id} className="rounded border border-slate-200 p-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium">{contact.name}</span>
+                      <button
+                        className="rounded border border-slate-300 px-2 py-1 hover:bg-slate-100"
+                        onClick={() =>
+                          void handleUpdateContactStatus(
+                            contact.id,
+                            contact.status === "ACTIVE" ? "INACTIVE" : "ACTIVE"
+                          )
+                        }
+                      >
+                        {contact.status}
+                      </button>
+                    </div>
+                    <p className="mt-1 text-slate-500">{contact.email || contact.wallet_address || "-"}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="module-panel rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-600">
+                Custodian Management
+              </h3>
+              <div className="grid gap-2">
+                <input
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  placeholder="Custodian name"
+                  value={custodianForm.name}
+                  onChange={(event) => setCustodianForm((prev) => ({ ...prev, name: event.target.value }))}
+                />
+                <select
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  value={custodianForm.providerType}
+                  onChange={(event) =>
+                    setCustodianForm((prev) => ({ ...prev, providerType: event.target.value }))
+                  }
+                >
+                  <option value="CUSTODY">CUSTODY</option>
+                  <option value="EXCHANGE">EXCHANGE</option>
+                  <option value="BROKER">BROKER</option>
+                </select>
+                <input
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  placeholder="Account reference"
+                  value={custodianForm.accountReference}
+                  onChange={(event) =>
+                    setCustodianForm((prev) => ({ ...prev, accountReference: event.target.value }))
+                  }
+                />
+                <button
+                  className="rounded-lg bg-slate px-4 py-2 text-sm font-medium text-white hover:bg-ink"
+                  onClick={() => void handleCreateCustodian()}
+                  disabled={loading}
+                >
+                  Add Custodian
+                </button>
+              </div>
+              <ul className="mt-3 max-h-48 space-y-2 overflow-auto text-xs">
+                {custodians.map((custodian) => (
+                  <li key={custodian.id} className="rounded border border-slate-200 p-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium">{custodian.name}</span>
+                      <button
+                        className="rounded border border-slate-300 px-2 py-1 hover:bg-slate-100"
+                        onClick={() =>
+                          void handleUpdateCustodianStatus(
+                            custodian.id,
+                            custodian.status === "ACTIVE" ? "INACTIVE" : "ACTIVE"
+                          )
+                        }
+                      >
+                        {custodian.status}
+                      </button>
+                    </div>
+                    <p className="mt-1 text-slate-500">
+                      {custodian.provider_type} · {custodian.account_reference || "no reference"}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="module-panel rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-600">
+                Unidentified Address Queue
+              </h3>
+              <div className="grid gap-2">
+                <input
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  placeholder="Chain"
+                  value={unidentifiedForm.chain}
+                  onChange={(event) =>
+                    setUnidentifiedForm((prev) => ({ ...prev, chain: event.target.value }))
+                  }
+                />
+                <input
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  placeholder="Address"
+                  value={unidentifiedForm.address}
+                  onChange={(event) =>
+                    setUnidentifiedForm((prev) => ({ ...prev, address: event.target.value }))
+                  }
+                />
+                <input
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  placeholder="Suggested label"
+                  value={unidentifiedForm.label}
+                  onChange={(event) =>
+                    setUnidentifiedForm((prev) => ({ ...prev, label: event.target.value }))
+                  }
+                />
+                <button
+                  className="rounded-lg bg-slate px-4 py-2 text-sm font-medium text-white hover:bg-ink"
+                  onClick={() => void handleCreateUnidentifiedAddress()}
+                  disabled={loading}
+                >
+                  Add Address
+                </button>
+              </div>
+              <ul className="mt-3 max-h-48 space-y-2 overflow-auto text-xs">
+                {unidentifiedAddresses.map((item) => (
+                  <li key={item.id} className="rounded border border-slate-200 p-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-mono">{item.address.slice(0, 14)}...</span>
+                      <button
+                        className="rounded border border-slate-300 px-2 py-1 hover:bg-slate-100"
+                        onClick={() => void handleResolveUnidentifiedAddress(item)}
+                      >
+                        {item.status}
+                      </button>
+                    </div>
+                    <p className="mt-1 text-slate-500 uppercase">
+                      {item.chain} · {item.label || "unlabeled"}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
+
+          <section id="assets" className="module-panel mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-600">
+              Assets Inventory
+            </h3>
+            <div className="max-h-64 overflow-auto rounded-lg border border-slate-200">
+              <table className="min-w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-200 text-slate-500">
+                    <th className="px-2 py-2">Token</th>
+                    <th className="px-2 py-2">Network</th>
+                    <th className="px-2 py-2">Class</th>
+                    <th className="px-2 py-2">Wallets</th>
+                    <th className="px-2 py-2">Quantity</th>
+                    <th className="px-2 py-2">Value</th>
+                    <th className="px-2 py-2">Latest</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {assetInventory.map((asset) => (
+                    <tr key={`${asset.token_symbol}-${asset.chain}`} className="border-b border-slate-100">
+                      <td className="px-2 py-2 font-medium">{asset.token_symbol}</td>
+                      <td className="px-2 py-2 uppercase">{asset.chain}</td>
+                      <td className="px-2 py-2">{asset.asset_class}</td>
+                      <td className="px-2 py-2">{asset.wallet_count}</td>
+                      <td className="px-2 py-2">{fmtNumber(asset.quantity_sum, 6)}</td>
+                      <td className="px-2 py-2">{fmtUsd(asset.value_usd_sum)}</td>
+                      <td className="px-2 py-2">
+                        {asset.latest_snapshot_at
+                          ? new Date(asset.latest_snapshot_at).toLocaleString()
+                          : "-"}
+                      </td>
+                    </tr>
+                  ))}
+                  {assetInventory.length === 0 && (
+                    <tr>
+                      <td className="px-2 py-2 text-slate-500" colSpan={7}>
+                        No assets inventory yet.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section id="positions" className="module-panel mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-600">Positions</h3>
+              <label className="inline-flex items-center gap-2 text-xs text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={showZeroPositions}
+                  onChange={(event) => setShowZeroPositions(event.target.checked)}
+                />
+                Show zero balance
+              </label>
+            </div>
+            <div className="grid gap-2 md:grid-cols-4">
+              <select
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                value={positionForm.walletId}
+                onChange={(event) => setPositionForm((prev) => ({ ...prev, walletId: event.target.value }))}
+              >
+                <option value="">Wallet (optional)</option>
+                {wallets.map((wallet) => (
+                  <option key={wallet.id} value={wallet.id}>
+                    {wallet.chain}:{wallet.address.slice(0, 10)}
+                  </option>
+                ))}
+              </select>
+              <input
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                placeholder="Token"
+                value={positionForm.tokenSymbol}
+                onChange={(event) =>
+                  setPositionForm((prev) => ({ ...prev, tokenSymbol: event.target.value }))
+                }
+              />
+              <input
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                placeholder="Quantity"
+                value={positionForm.quantityDecimal}
+                onChange={(event) =>
+                  setPositionForm((prev) => ({ ...prev, quantityDecimal: event.target.value }))
+                }
+              />
+              <select
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                value={positionForm.reconciliationStatus}
+                onChange={(event) =>
+                  setPositionForm((prev) => ({ ...prev, reconciliationStatus: event.target.value }))
+                }
+              >
+                <option value="PENDING">PENDING</option>
+                <option value="RECONCILED">RECONCILED</option>
+                <option value="UNMATCHED">UNMATCHED</option>
+              </select>
+              <input
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                placeholder="Cost basis USD"
+                value={positionForm.costBasisUsd}
+                onChange={(event) =>
+                  setPositionForm((prev) => ({ ...prev, costBasisUsd: event.target.value }))
+                }
+              />
+              <input
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                placeholder="Market value USD"
+                value={positionForm.marketValueUsd}
+                onChange={(event) =>
+                  setPositionForm((prev) => ({ ...prev, marketValueUsd: event.target.value }))
+                }
+              />
+              <button
+                className="rounded-lg bg-slate px-4 py-2 text-sm font-medium text-white hover:bg-ink md:col-span-2"
+                onClick={() => void handleCreatePosition()}
+                disabled={loading}
+              >
+                Add Position
+              </button>
+            </div>
+            <div className="mt-3 max-h-56 overflow-auto rounded-lg border border-slate-200">
+              <table className="min-w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-200 text-slate-500">
+                    <th className="px-2 py-2">Token</th>
+                    <th className="px-2 py-2">Wallet</th>
+                    <th className="px-2 py-2">Qty</th>
+                    <th className="px-2 py-2">Cost</th>
+                    <th className="px-2 py-2">Market</th>
+                    <th className="px-2 py-2">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {positions.map((position) => (
+                    <tr key={position.id} className="border-b border-slate-100">
+                      <td className="px-2 py-2 font-medium">{position.token_symbol}</td>
+                      <td className="px-2 py-2">
+                        {position.wallet_chain && position.wallet_address
+                          ? `${position.wallet_chain}:${position.wallet_address.slice(0, 8)}...`
+                          : "-"}
+                      </td>
+                      <td className="px-2 py-2">{position.quantity_decimal}</td>
+                      <td className="px-2 py-2">{fmtUsd(Number(position.cost_basis_usd || 0))}</td>
+                      <td className="px-2 py-2">{fmtUsd(Number(position.market_value_usd || 0))}</td>
+                      <td className="px-2 py-2">
+                        <button
+                          className="rounded border border-slate-300 px-2 py-1 hover:bg-slate-100"
+                          onClick={() =>
+                            void handleUpdatePositionStatus(
+                              position.id,
+                              position.reconciliation_status === "RECONCILED" ? "PENDING" : "RECONCILED"
+                            )
+                          }
+                        >
+                          {position.reconciliation_status}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {positions.length === 0 && (
+                    <tr>
+                      <td className="px-2 py-2 text-slate-500" colSpan={6}>
+                        No positions available.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section id="payments" className="mb-6 grid gap-6 lg:grid-cols-2">
+            <div className="module-panel rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-600">
+                Accounts Receivable (Invoices)
+              </h3>
+              <div className="grid gap-2 md:grid-cols-2">
+                <input
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  placeholder="Customer"
+                  value={invoiceForm.customerName}
+                  onChange={(event) =>
+                    setInvoiceForm((prev) => ({ ...prev, customerName: event.target.value }))
+                  }
+                />
+                <input
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  placeholder="Invoice #"
+                  value={invoiceForm.invoiceNumber}
+                  onChange={(event) =>
+                    setInvoiceForm((prev) => ({ ...prev, invoiceNumber: event.target.value }))
+                  }
+                />
+                <input
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  placeholder="Amount USD"
+                  value={invoiceForm.amountUsd}
+                  onChange={(event) =>
+                    setInvoiceForm((prev) => ({ ...prev, amountUsd: event.target.value }))
+                  }
+                />
+                <select
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  value={invoiceForm.status}
+                  onChange={(event) => setInvoiceForm((prev) => ({ ...prev, status: event.target.value }))}
+                >
+                  <option value="DRAFT">DRAFT</option>
+                  <option value="SENT">SENT</option>
+                  <option value="PAID">PAID</option>
+                </select>
+                <input
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm md:col-span-2"
+                  type="date"
+                  value={invoiceForm.dueDate}
+                  onChange={(event) => setInvoiceForm((prev) => ({ ...prev, dueDate: event.target.value }))}
+                />
+                <button
+                  className="rounded-lg bg-slate px-4 py-2 text-sm font-medium text-white hover:bg-ink md:col-span-2"
+                  onClick={() => void handleCreateInvoice()}
+                  disabled={loading}
+                >
+                  Create Invoice
+                </button>
+              </div>
+              <ul className="mt-3 max-h-56 space-y-2 overflow-auto text-xs">
+                {invoices.map((invoice) => (
+                  <li key={invoice.id} className="rounded border border-slate-200 p-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium">
+                        {invoice.customer_name} · {fmtUsd(Number(invoice.amount_usd))}
+                      </span>
+                      <button
+                        className="rounded border border-slate-300 px-2 py-1 hover:bg-slate-100"
+                        onClick={() =>
+                          void handleSetInvoiceStatus(
+                            invoice.id,
+                            invoice.status === "PAID" ? "SENT" : "PAID"
+                          )
+                        }
+                      >
+                        {invoice.status}
+                      </button>
+                    </div>
+                    <p className="mt-1 text-slate-500">#{invoice.invoice_number || "-"} · due {invoice.due_date || "-"}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="module-panel rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-600">
+                Accounts Payable (Bills)
+              </h3>
+              <div className="grid gap-2 md:grid-cols-2">
+                <input
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  placeholder="Vendor"
+                  value={billForm.vendorName}
+                  onChange={(event) => setBillForm((prev) => ({ ...prev, vendorName: event.target.value }))}
+                />
+                <input
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  placeholder="Bill #"
+                  value={billForm.billNumber}
+                  onChange={(event) => setBillForm((prev) => ({ ...prev, billNumber: event.target.value }))}
+                />
+                <input
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  placeholder="Amount USD"
+                  value={billForm.amountUsd}
+                  onChange={(event) => setBillForm((prev) => ({ ...prev, amountUsd: event.target.value }))}
+                />
+                <select
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  value={billForm.status}
+                  onChange={(event) => setBillForm((prev) => ({ ...prev, status: event.target.value }))}
+                >
+                  <option value="OPEN">OPEN</option>
+                  <option value="APPROVED">APPROVED</option>
+                  <option value="PAID">PAID</option>
+                </select>
+                <input
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm md:col-span-2"
+                  type="date"
+                  value={billForm.dueDate}
+                  onChange={(event) => setBillForm((prev) => ({ ...prev, dueDate: event.target.value }))}
+                />
+                <button
+                  className="rounded-lg bg-slate px-4 py-2 text-sm font-medium text-white hover:bg-ink md:col-span-2"
+                  onClick={() => void handleCreateBill()}
+                  disabled={loading}
+                >
+                  Create Bill
+                </button>
+              </div>
+              <ul className="mt-3 max-h-56 space-y-2 overflow-auto text-xs">
+                {bills.map((bill) => (
+                  <li key={bill.id} className="rounded border border-slate-200 p-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium">
+                        {bill.vendor_name} · {fmtUsd(Number(bill.amount_usd))}
+                      </span>
+                      <button
+                        className="rounded border border-slate-300 px-2 py-1 hover:bg-slate-100"
+                        onClick={() =>
+                          void handleSetBillStatus(bill.id, bill.status === "PAID" ? "OPEN" : "PAID")
+                        }
+                      >
+                        {bill.status}
+                      </button>
+                    </div>
+                    <p className="mt-1 text-slate-500">#{bill.bill_number || "-"} · due {bill.due_date || "-"}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
+
           <section
             id="ledger"
             className="module-panel mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
@@ -1137,6 +2388,31 @@ export default function HomePage() {
             <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-600">
               Contextual Ledger
             </h3>
+            <div className="mb-3 flex flex-wrap gap-2">
+              {[
+                { key: "TRANSACTIONS", label: "Transactions" },
+                { key: "COST_BASIS", label: "Cost Basis" },
+                { key: "ROLL_FORWARD", label: "Roll Forward" },
+                { key: "TRIAL_BALANCE", label: "Trial Balance" }
+              ].map((tab) => (
+                <button
+                  key={tab.key}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-wide ${
+                    ledgerTab === tab.key
+                      ? "border-slate-700 bg-slate-700 text-white"
+                      : "border-slate-300 text-slate-600 hover:bg-slate-100"
+                  }`}
+                  onClick={() =>
+                    setLedgerTab(
+                      tab.key as "TRANSACTIONS" | "COST_BASIS" | "ROLL_FORWARD" | "TRIAL_BALANCE"
+                    )
+                  }
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
             <div className="grid gap-2 md:grid-cols-5">
               <select
                 className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
@@ -1264,6 +2540,27 @@ export default function HomePage() {
               </button>
             </div>
 
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                className="rounded-full border border-slate-300 px-3 py-1 text-xs text-slate-600 hover:bg-slate-100"
+                onClick={() => setTxFilters({ search: "staking", direction: "IN", minUsd: "0" })}
+              >
+                Preset: Staking Inflows
+              </button>
+              <button
+                className="rounded-full border border-slate-300 px-3 py-1 text-xs text-slate-600 hover:bg-slate-100"
+                onClick={() => setTxFilters({ search: "bridge", direction: "OUT", minUsd: "1000" })}
+              >
+                Preset: Bridge Outflows
+              </button>
+              <button
+                className="rounded-full border border-slate-300 px-3 py-1 text-xs text-slate-600 hover:bg-slate-100"
+                onClick={() => setTxFilters({ search: "", direction: "", minUsd: "" })}
+              >
+                Reset Presets
+              </button>
+            </div>
+
             <div className="mt-4 max-h-80 overflow-auto rounded-lg border border-slate-200">
               <table className="min-w-full text-left text-xs">
                 <thead>
@@ -1358,6 +2655,101 @@ export default function HomePage() {
                 )}
               </ul>
             </div>
+
+            {ledgerTab === "COST_BASIS" && (
+              <div className="mt-4 rounded-lg border border-slate-200 p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Cost Basis Snapshot
+                </p>
+                {costBasisSummary ? (
+                  <div className="mt-2 grid gap-1 text-xs text-slate-700">
+                    <p>
+                      Method: <strong>{costBasisSummary.method}</strong>
+                    </p>
+                    <p>Token: {costBasisSummary.tokenSymbol}</p>
+                    <p>Remaining Quantity: {fmtNumber(costBasisSummary.remainingQuantity, 8)}</p>
+                    <p>Remaining Cost: {fmtUsd(costBasisSummary.remainingCostUsd)}</p>
+                    <p>Realized P/L: {fmtUsd(costBasisSummary.realizedGainLossUsd)}</p>
+                  </div>
+                ) : (
+                  <p className="mt-2 text-xs text-slate-500">
+                    Run a cost basis calculation in Governance to populate this tab.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {ledgerTab === "ROLL_FORWARD" && (
+              <div className="mt-4 max-h-56 overflow-auto rounded-lg border border-slate-200">
+                <table className="min-w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-slate-500">
+                      <th className="px-2 py-2">Token</th>
+                      <th className="px-2 py-2">Inflow USD</th>
+                      <th className="px-2 py-2">Outflow USD</th>
+                      <th className="px-2 py-2">Net USD</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rollForwardRows.map((row) => (
+                      <tr key={row.token} className="border-b border-slate-100">
+                        <td className="px-2 py-2">{row.token}</td>
+                        <td className="px-2 py-2">{fmtUsd(row.inflow)}</td>
+                        <td className="px-2 py-2">{fmtUsd(row.outflow)}</td>
+                        <td className="px-2 py-2">{fmtUsd(row.inflow - row.outflow)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {ledgerTab === "TRIAL_BALANCE" && (
+              <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                <div className="max-h-56 overflow-auto rounded-lg border border-slate-200">
+                  <table className="min-w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-slate-500">
+                        <th className="px-2 py-2">Account</th>
+                        <th className="px-2 py-2">Debit</th>
+                        <th className="px-2 py-2">Credit</th>
+                        <th className="px-2 py-2">Net</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {trialBalanceRows.map((row) => (
+                        <tr key={row.account} className="border-b border-slate-100">
+                          <td className="px-2 py-2">{row.account}</td>
+                          <td className="px-2 py-2">{fmtUsd(row.debit)}</td>
+                          <td className="px-2 py-2">{fmtUsd(row.credit)}</td>
+                          <td className="px-2 py-2">{fmtUsd(row.net)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="max-h-56 overflow-auto rounded-lg border border-slate-200">
+                  <table className="min-w-full text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-slate-500">
+                        <th className="px-2 py-2">Pivot Group</th>
+                        <th className="px-2 py-2">Rows</th>
+                        <th className="px-2 py-2">USD</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ledgerPivotRows.map((row) => (
+                        <tr key={row.group} className="border-b border-slate-100">
+                          <td className="px-2 py-2">{row.group}</td>
+                          <td className="px-2 py-2">{row.count}</td>
+                          <td className="px-2 py-2">{fmtUsd(row.usd)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </section>
 
           <section id="reconciliation" className="mb-6 grid gap-6 lg:grid-cols-2">
@@ -1477,7 +2869,7 @@ export default function HomePage() {
                       <th className="px-2 py-2">Title</th>
                       <th className="px-2 py-2">Type</th>
                       <th className="px-2 py-2">Status</th>
-                      <th className="px-2 py-2">Action</th>
+                      <th className="px-2 py-2">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1487,18 +2879,246 @@ export default function HomePage() {
                         <td className="px-2 py-2">{report.report_type}</td>
                         <td className="px-2 py-2">{report.status}</td>
                         <td className="px-2 py-2">
-                          <button
-                            className="rounded border border-slate-300 px-2 py-1 text-[11px] hover:bg-slate-100"
-                            onClick={() => void handleRunReport(report.id)}
-                          >
-                            Run
-                          </button>
+                          <div className="flex gap-1">
+                            <button
+                              className="rounded border border-slate-300 px-2 py-1 text-[11px] hover:bg-slate-100"
+                              onClick={() => void handleRunReport(report.id)}
+                            >
+                              Run
+                            </button>
+                            <button
+                              className="rounded border border-slate-300 px-2 py-1 text-[11px] hover:bg-slate-100"
+                              onClick={() => void handlePublishReport(report.id)}
+                            >
+                              Publish
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+
+              <h4 className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Published Reports
+              </h4>
+              <ul className="mt-2 max-h-40 space-y-2 overflow-auto text-xs">
+                {publishedReports.map((publication) => (
+                  <li key={publication.id} className="rounded border border-slate-200 p-2">
+                    <p className="font-medium">{publication.title}</p>
+                    <p className="mt-1 text-slate-500">
+                      {publication.report_type} · {publication.visibility} ·{" "}
+                      {new Date(publication.published_at).toLocaleString()}
+                    </p>
+                  </li>
+                ))}
+                {publishedReports.length === 0 && (
+                  <li className="rounded border border-dashed border-slate-200 p-2 text-slate-500">
+                    No published reports yet.
+                  </li>
+                )}
+              </ul>
+            </div>
+          </section>
+
+          <section id="integrations" className="mb-6 grid gap-6 lg:grid-cols-3">
+            <div className="module-panel rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-600">
+                ERP Integrations
+              </h3>
+              <div className="grid gap-2">
+                <input
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  placeholder="System (NETSUITE/SAP)"
+                  value={erpForm.systemName}
+                  onChange={(event) => setErpForm((prev) => ({ ...prev, systemName: event.target.value }))}
+                />
+                <textarea
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  rows={3}
+                  value={erpForm.configJson}
+                  onChange={(event) => setErpForm((prev) => ({ ...prev, configJson: event.target.value }))}
+                />
+                <button
+                  className="rounded-lg bg-slate px-4 py-2 text-sm font-medium text-white hover:bg-ink"
+                  onClick={() => void handleCreateErpConnection()}
+                  disabled={loading}
+                >
+                  Add ERP Connection
+                </button>
+              </div>
+              <ul className="mt-3 space-y-2 text-xs">
+                {erpConnections.map((connection) => (
+                  <li key={connection.id} className="rounded border border-slate-200 p-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium">{connection.system_name}</span>
+                      <button
+                        className="rounded border border-slate-300 px-2 py-1 hover:bg-slate-100"
+                        onClick={() => void handleSyncErp(connection.id)}
+                      >
+                        Sync
+                      </button>
+                    </div>
+                    <p className="mt-1 text-slate-500">
+                      {connection.status} · last sync: {connection.last_sync_at || "never"}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="module-panel rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-600">
+                Xero Integration
+              </h3>
+              <textarea
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                rows={3}
+                value={xeroForm.configJson}
+                onChange={(event) => setXeroForm({ configJson: event.target.value })}
+              />
+              <button
+                className="mt-2 rounded-lg bg-slate px-4 py-2 text-sm font-medium text-white hover:bg-ink"
+                onClick={() => void handleCreateXeroConnection()}
+                disabled={loading}
+              >
+                Connect Xero
+              </button>
+              <ul className="mt-3 space-y-2 text-xs">
+                {xeroConnections.map((connection) => (
+                  <li key={connection.id} className="rounded border border-slate-200 p-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium">XERO</span>
+                      <button
+                        className="rounded border border-slate-300 px-2 py-1 hover:bg-slate-100"
+                        onClick={() => void handleMarkIntegrationSynced("xero", connection.id)}
+                      >
+                        Mark Synced
+                      </button>
+                    </div>
+                    <p className="mt-1 text-slate-500">{connection.status}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="module-panel rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-600">
+                QuickBooks Integration
+              </h3>
+              <textarea
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                rows={3}
+                value={quickbooksForm.configJson}
+                onChange={(event) => setQuickbooksForm({ configJson: event.target.value })}
+              />
+              <button
+                className="mt-2 rounded-lg bg-slate px-4 py-2 text-sm font-medium text-white hover:bg-ink"
+                onClick={() => void handleCreateQuickbooksConnection()}
+                disabled={loading}
+              >
+                Connect QuickBooks
+              </button>
+              <ul className="mt-3 space-y-2 text-xs">
+                {quickbooksConnections.map((connection) => (
+                  <li key={connection.id} className="rounded border border-slate-200 p-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium">QUICKBOOKS</span>
+                      <button
+                        className="rounded border border-slate-300 px-2 py-1 hover:bg-slate-100"
+                        onClick={() => void handleMarkIntegrationSynced("quickbooks", connection.id)}
+                      >
+                        Mark Synced
+                      </button>
+                    </div>
+                    <p className="mt-1 text-slate-500">{connection.status}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
+
+          <section id="frameworks" className="mb-6 grid gap-6 lg:grid-cols-2">
+            <div className="module-panel rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-600">
+                Frameworks Workspace (1099)
+              </h3>
+              <div className="grid gap-2 md:grid-cols-2">
+                <input
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm md:col-span-2"
+                  placeholder="Case title"
+                  value={frameworkForm.title}
+                  onChange={(event) => setFrameworkForm((prev) => ({ ...prev, title: event.target.value }))}
+                />
+                <input
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  type="date"
+                  value={frameworkForm.dueDate}
+                  onChange={(event) => setFrameworkForm((prev) => ({ ...prev, dueDate: event.target.value }))}
+                />
+                <input
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  placeholder="Owner"
+                  value={frameworkForm.owner}
+                  onChange={(event) => setFrameworkForm((prev) => ({ ...prev, owner: event.target.value }))}
+                />
+                <select
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  value={frameworkForm.status}
+                  onChange={(event) => setFrameworkForm((prev) => ({ ...prev, status: event.target.value }))}
+                >
+                  <option value="OPEN">OPEN</option>
+                  <option value="IN_PROGRESS">IN_PROGRESS</option>
+                  <option value="COMPLETED">COMPLETED</option>
+                </select>
+                <button
+                  className="rounded-lg bg-slate px-4 py-2 text-sm font-medium text-white hover:bg-ink"
+                  onClick={() => void handleCreateFrameworkCase()}
+                  disabled={loading}
+                >
+                  Add Case
+                </button>
+              </div>
+              <ul className="mt-3 max-h-56 space-y-2 overflow-auto text-xs">
+                {frameworkCases1099.map((item) => (
+                  <li key={item.id} className="rounded border border-slate-200 p-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium">{item.title}</span>
+                      <button
+                        className="rounded border border-slate-300 px-2 py-1 hover:bg-slate-100"
+                        onClick={() =>
+                          void handleUpdateFrameworkCaseStatus(
+                            item.id,
+                            item.status === "COMPLETED" ? "OPEN" : "COMPLETED"
+                          )
+                        }
+                      >
+                        {item.status}
+                      </button>
+                    </div>
+                    <p className="mt-1 text-slate-500">
+                      owner: {item.owner || "unassigned"} · due: {item.due_date || "n/a"}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="module-panel rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-600">
+                Framework Catalog
+              </h3>
+              <ul className="space-y-2 text-xs">
+                {frameworkCatalog.map((item) => (
+                  <li key={item.code} className="rounded border border-slate-200 p-2">
+                    <p className="font-medium">{item.name}</p>
+                    <p className="mt-1 text-slate-500">
+                      {item.code} · {item.status}
+                    </p>
+                  </li>
+                ))}
+              </ul>
             </div>
           </section>
 
@@ -1782,48 +3402,29 @@ export default function HomePage() {
 
             <div className="module-panel rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-600">
-                ERP Integrations
+                Workflow Orchestration
               </h3>
-              <div className="grid gap-2">
-                <input
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                  placeholder="System (NETSUITE/XERO/SAP)"
-                  value={erpForm.systemName}
-                  onChange={(event) => setErpForm((prev) => ({ ...prev, systemName: event.target.value }))}
-                />
-                <textarea
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                  rows={3}
-                  value={erpForm.configJson}
-                  onChange={(event) => setErpForm((prev) => ({ ...prev, configJson: event.target.value }))}
-                />
-                <button
-                  className="rounded-lg bg-slate px-4 py-2 text-sm font-medium text-white hover:bg-ink"
-                  onClick={() => void handleCreateErpConnection()}
-                  disabled={loading}
-                >
-                  Add ERP Connection
-                </button>
+              <div className="rounded-lg border border-slate-200 p-3 text-xs">
+                <p className="text-slate-500">Active alerts</p>
+                <p className="text-lg font-semibold text-ink">
+                  {alerts.filter((item) => Boolean(item.is_active)).length}
+                </p>
               </div>
-
-              <ul className="mt-3 space-y-2 text-xs">
-                {erpConnections.map((connection) => (
-                  <li key={connection.id} className="rounded-lg border border-slate-200 p-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium">{connection.system_name}</span>
-                      <button
-                        className="rounded border border-slate-300 px-2 py-1 hover:bg-slate-100"
-                        onClick={() => void handleSyncErp(connection.id)}
-                      >
-                        Sync
-                      </button>
-                    </div>
-                    <p className="mt-1 text-slate-500">
-                      {connection.status} · last sync: {connection.last_sync_at || "never"}
-                    </p>
-                  </li>
-                ))}
-              </ul>
+              <div className="mt-2 rounded-lg border border-slate-200 p-3 text-xs">
+                <p className="text-slate-500">Active rules</p>
+                <p className="text-lg font-semibold text-ink">
+                  {rules.filter((item) => Boolean(item.is_active)).length}
+                </p>
+              </div>
+              <div className="mt-2 rounded-lg border border-slate-200 p-3 text-xs">
+                <p className="text-slate-500">Active webhooks</p>
+                <p className="text-lg font-semibold text-ink">
+                  {webhooks.filter((item) => item.status === "ACTIVE").length}
+                </p>
+              </div>
+              <p className="mt-3 text-xs text-slate-500">
+                Use Alerts, Rules, and Webhooks to orchestrate treasury workflows end-to-end.
+              </p>
             </div>
           </section>
         </>

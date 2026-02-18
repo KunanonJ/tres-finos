@@ -12,14 +12,21 @@ This README is written as a handoff guide so a new engineer can continue develop
 
 Current product surface includes:
 - Overview dashboard and KPI cards
+- Net worth trend, network exposure, and recent activity views
 - Wallet and transaction operations
+- Accounts workspace (contacts, custodians, unidentified addresses)
+- Assets inventory + history endpoint
+- Positions management
+- Payments AP/AR (invoices and bills)
 - Reconciliation runs (manual + auto-run)
-- Reporting (create + run)
+- Reporting (create + run + publish)
 - Alerts and automation rules
 - Cost basis calculation
 - Team/RBAC basics
 - Webhooks and test events
 - ERP connection + sync scaffolding
+- Xero and QuickBooks integration profiles
+- Frameworks workspace (1099 active + framework catalog placeholders)
 
 ## 2) Product References
 
@@ -179,8 +186,26 @@ npx wrangler d1 execute tres-finos-db \
 - `GET/POST/PATCH /v1/reconciliations`
 - `POST /v1/reconciliations/auto-run`
 - `GET/POST /v1/reports`
+- `GET /v1/reports/published`
 - `GET /v1/reports/:id`
 - `POST /v1/reports/:id/run`
+- `POST /v1/reports/:id/publish`
+
+### Accounts, Assets, Positions, Payments
+- `GET/POST /v1/accounts/contacts`
+- `PATCH /v1/accounts/contacts/:id`
+- `GET/POST /v1/accounts/custodians`
+- `PATCH /v1/accounts/custodians/:id`
+- `GET/POST /v1/accounts/unidentified-addresses`
+- `PATCH /v1/accounts/unidentified-addresses/:id`
+- `GET /v1/assets`
+- `GET /v1/assets/:symbol/history`
+- `GET/POST /v1/positions`
+- `PATCH /v1/positions/:id`
+- `GET/POST /v1/payments/invoices`
+- `PATCH /v1/payments/invoices/:id`
+- `GET/POST /v1/payments/bills`
+- `PATCH /v1/payments/bills/:id`
 
 ### Automation and Integrations
 - `GET/POST/PATCH /v1/alerts`
@@ -191,6 +216,13 @@ npx wrangler d1 execute tres-finos-db \
 - `POST /v1/webhooks/:id/test`
 - `GET/POST /v1/integrations/erp`
 - `POST /v1/integrations/erp/:id/sync`
+- `GET/POST /v1/integrations/xero`
+- `PATCH /v1/integrations/xero/:id`
+- `GET/POST /v1/integrations/quickbooks`
+- `PATCH /v1/integrations/quickbooks/:id`
+- `GET /v1/frameworks/catalog`
+- `GET/POST /v1/frameworks/1099`
+- `PATCH /v1/frameworks/1099/:id`
 
 ## 10) Deployment Runbook (Safe Sequence)
 

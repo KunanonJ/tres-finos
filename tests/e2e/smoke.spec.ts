@@ -206,3 +206,211 @@ test('api phase3 modules: team, notes, cost basis, webhooks, export', async ({ r
   const csvText = await exportRes.text();
   expect(csvText).toContain('tx_hash');
 });
+
+test('api phase4 modules: accounts, assets, positions, payments, reports publish, integrations, frameworks', async ({
+  request
+}) => {
+  const organizationName = `E2E Phase4 ${Date.now()}`;
+
+  const createOrgRes = await request.post(`${apiBase}/v1/organizations`, {
+    data: { name: organizationName, baseCurrency: 'USD' }
+  });
+  expect(createOrgRes.ok()).toBeTruthy();
+  const org = (await createOrgRes.json()) as { id: string };
+
+  const createWalletRes = await request.post(`${apiBase}/v1/wallets`, {
+    data: {
+      organizationId: org.id,
+      chain: 'ethereum',
+      address: `0x${Date.now()}2222222222222222222222222222222222`.slice(0, 42),
+      label: 'Phase4 Wallet',
+      sourceType: 'ONCHAIN'
+    }
+  });
+  expect(createWalletRes.ok()).toBeTruthy();
+  const wallet = (await createWalletRes.json()) as { id: string };
+
+  const createTxRes = await request.post(`${apiBase}/v1/transactions`, {
+    data: {
+      organizationId: org.id,
+      walletId: wallet.id,
+      txHash: `0xe2ephase4${Date.now()}`,
+      chain: 'ethereum',
+      tokenSymbol: 'ETH',
+      amountDecimal: '1.75',
+      fiatValueUsd: '5000.00',
+      direction: 'IN',
+      status: 'CONFIRMED',
+      occurredAt: new Date().toISOString()
+    }
+  });
+  expect(createTxRes.ok()).toBeTruthy();
+
+  const createContactRes = await request.post(`${apiBase}/v1/accounts/contacts`, {
+    data: {
+      organizationId: org.id,
+      name: 'Counterparty Alpha',
+      email: `counterparty+${Date.now()}@example.com`,
+      walletAddress: wallet.id
+    }
+  });
+  expect(createContactRes.ok()).toBeTruthy();
+
+  const contactsRes = await request.get(`${apiBase}/v1/accounts/contacts?organizationId=${org.id}`);
+  expect(contactsRes.ok()).toBeTruthy();
+  const contactsBody = (await contactsRes.json()) as { items?: Array<{ name: string }> };
+  expect((contactsBody.items ?? []).some((item) => item.name === 'Counterparty Alpha')).toBeTruthy();
+
+  const createCustodianRes = await request.post(`${apiBase}/v1/accounts/custodians`, {
+    data: {
+      organizationId: org.id,
+      name: 'Custody Partner',
+      providerType: 'CUSTODY',
+      accountReference: `ACC-${Date.now()}`
+    }
+  });
+  expect(createCustodianRes.ok()).toBeTruthy();
+
+  const createUnknownRes = await request.post(`${apiBase}/v1/accounts/unidentified-addresses`, {
+    data: {
+      organizationId: org.id,
+      chain: 'ethereum',
+      address: `0x${Date.now()}3333333333333333333333333333333333`.slice(0, 42),
+      label: 'Unknown Queue Item'
+    }
+  });
+  expect(createUnknownRes.ok()).toBeTruthy();
+  const unknown = (await createUnknownRes.json()) as { id: string };
+
+  const resolveUnknownRes = await request.patch(
+    `${apiBase}/v1/accounts/unidentified-addresses/${unknown.id}`,
+    {
+      data: { status: 'RESOLVED', label: 'Resolved Counterparty' }
+    }
+  );
+  expect(resolveUnknownRes.ok()).toBeTruthy();
+
+  const assetsRes = await request.get(`${apiBase}/v1/assets?organizationId=${org.id}`);
+  expect(assetsRes.ok()).toBeTruthy();
+  const assetsBody = (await assetsRes.json()) as { items?: Array<{ token_symbol: string }> };
+  expect((assetsBody.items ?? []).some((item) => item.token_symbol === 'ETH')).toBeTruthy();
+
+  const createPositionRes = await request.post(`${apiBase}/v1/positions`, {
+    data: {
+      organizationId: org.id,
+      walletId: wallet.id,
+      tokenSymbol: 'ETH',
+      assetClass: 'TOKEN',
+      quantityDecimal: '1.75',
+      reconciliationStatus: 'PENDING',
+      marketValueUsd: '5000'
+    }
+  });
+  expect(createPositionRes.ok()).toBeTruthy();
+
+  const positionsRes = await request.get(`${apiBase}/v1/positions?organizationId=${org.id}&showZero=true`);
+  expect(positionsRes.ok()).toBeTruthy();
+  const positionsBody = (await positionsRes.json()) as { items?: Array<{ token_symbol: string }> };
+  expect((positionsBody.items ?? []).some((item) => item.token_symbol === 'ETH')).toBeTruthy();
+
+  const createInvoiceRes = await request.post(`${apiBase}/v1/payments/invoices`, {
+    data: {
+      organizationId: org.id,
+      customerName: 'Customer A',
+      amountUsd: '1500.00',
+      status: 'SENT'
+    }
+  });
+  expect(createInvoiceRes.ok()).toBeTruthy();
+  const invoice = (await createInvoiceRes.json()) as { id: string };
+
+  const markInvoicePaidRes = await request.patch(`${apiBase}/v1/payments/invoices/${invoice.id}`, {
+    data: { status: 'PAID' }
+  });
+  expect(markInvoicePaidRes.ok()).toBeTruthy();
+
+  const createBillRes = await request.post(`${apiBase}/v1/payments/bills`, {
+    data: {
+      organizationId: org.id,
+      vendorName: 'Vendor B',
+      amountUsd: '700.00',
+      status: 'OPEN'
+    }
+  });
+  expect(createBillRes.ok()).toBeTruthy();
+  const bill = (await createBillRes.json()) as { id: string };
+
+  const markBillPaidRes = await request.patch(`${apiBase}/v1/payments/bills/${bill.id}`, {
+    data: { status: 'PAID' }
+  });
+  expect(markBillPaidRes.ok()).toBeTruthy();
+
+  const createReportRes = await request.post(`${apiBase}/v1/reports`, {
+    data: {
+      organizationId: org.id,
+      reportType: 'TRANSACTION_HISTORY',
+      title: 'Phase4 Publish Report'
+    }
+  });
+  expect(createReportRes.ok()).toBeTruthy();
+  const report = (await createReportRes.json()) as { id: string };
+
+  const publishReportRes = await request.post(`${apiBase}/v1/reports/${report.id}/publish`, {
+    data: { visibility: 'INTERNAL', publishedBy: 'e2e' }
+  });
+  expect(publishReportRes.ok()).toBeTruthy();
+
+  const publishedRes = await request.get(`${apiBase}/v1/reports/published?organizationId=${org.id}`);
+  expect(publishedRes.ok()).toBeTruthy();
+  const publishedBody = (await publishedRes.json()) as { items?: Array<{ report_id: string }> };
+  expect((publishedBody.items ?? []).some((item) => item.report_id === report.id)).toBeTruthy();
+
+  const createXeroRes = await request.post(`${apiBase}/v1/integrations/xero`, {
+    data: { organizationId: org.id, config: { mode: 'balances_only' }, status: 'CONNECTED' }
+  });
+  expect(createXeroRes.ok()).toBeTruthy();
+  const xero = (await createXeroRes.json()) as { id: string };
+
+  const patchXeroRes = await request.patch(`${apiBase}/v1/integrations/xero/${xero.id}`, {
+    data: { status: 'SYNCED' }
+  });
+  expect(patchXeroRes.ok()).toBeTruthy();
+
+  const createQuickbooksRes = await request.post(`${apiBase}/v1/integrations/quickbooks`, {
+    data: { organizationId: org.id, config: { mode: 'full_transactions' }, status: 'CONNECTED' }
+  });
+  expect(createQuickbooksRes.ok()).toBeTruthy();
+  const quickbooks = (await createQuickbooksRes.json()) as { id: string };
+
+  const patchQuickbooksRes = await request.patch(
+    `${apiBase}/v1/integrations/quickbooks/${quickbooks.id}`,
+    {
+      data: { status: 'SYNCED' }
+    }
+  );
+  expect(patchQuickbooksRes.ok()).toBeTruthy();
+
+  const createFrameworkCaseRes = await request.post(`${apiBase}/v1/frameworks/1099`, {
+    data: {
+      organizationId: org.id,
+      title: 'Prepare 1099 statement',
+      status: 'OPEN',
+      owner: 'Compliance Team'
+    }
+  });
+  expect(createFrameworkCaseRes.ok()).toBeTruthy();
+
+  const frameworkCasesRes = await request.get(`${apiBase}/v1/frameworks/1099?organizationId=${org.id}`);
+  expect(frameworkCasesRes.ok()).toBeTruthy();
+  const frameworkCasesBody = (await frameworkCasesRes.json()) as { items?: Array<{ title: string }> };
+  expect(
+    (frameworkCasesBody.items ?? []).some((item) => item.title === 'Prepare 1099 statement')
+  ).toBeTruthy();
+
+  const frameworkCatalogRes = await request.get(`${apiBase}/v1/frameworks/catalog`);
+  expect(frameworkCatalogRes.ok()).toBeTruthy();
+  const frameworkCatalogBody = (await frameworkCatalogRes.json()) as {
+    items?: Array<{ code: string }>;
+  };
+  expect((frameworkCatalogBody.items ?? []).some((item) => item.code === '1099')).toBeTruthy();
+});

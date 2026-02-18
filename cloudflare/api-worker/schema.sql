@@ -267,3 +267,193 @@ CREATE TABLE IF NOT EXISTS webhook_events (
 
 CREATE INDEX IF NOT EXISTS idx_webhook_events_webhook
   ON webhook_events(webhook_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS contacts (
+  id TEXT PRIMARY KEY,
+  organization_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  email TEXT,
+  wallet_address TEXT,
+  counterparty_type TEXT NOT NULL DEFAULT 'EXTERNAL',
+  status TEXT NOT NULL DEFAULT 'ACTIVE',
+  notes TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (organization_id) REFERENCES organizations(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_contacts_org_status
+  ON contacts(organization_id, status, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS custodians (
+  id TEXT PRIMARY KEY,
+  organization_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  provider_type TEXT NOT NULL DEFAULT 'CUSTODY',
+  account_reference TEXT,
+  status TEXT NOT NULL DEFAULT 'ACTIVE',
+  metadata_json TEXT,
+  last_sync_at TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (organization_id) REFERENCES organizations(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_custodians_org_status
+  ON custodians(organization_id, status, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS unidentified_addresses (
+  id TEXT PRIMARY KEY,
+  organization_id TEXT NOT NULL,
+  chain TEXT NOT NULL,
+  address TEXT NOT NULL,
+  label TEXT,
+  status TEXT NOT NULL DEFAULT 'PENDING',
+  first_seen_at TEXT,
+  last_seen_at TEXT,
+  notes TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (organization_id) REFERENCES organizations(id)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_unidentified_org_chain_address
+  ON unidentified_addresses(organization_id, chain, address);
+
+CREATE INDEX IF NOT EXISTS idx_unidentified_org_status
+  ON unidentified_addresses(organization_id, status, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS assets_snapshots (
+  id TEXT PRIMARY KEY,
+  organization_id TEXT NOT NULL,
+  wallet_id TEXT,
+  chain TEXT NOT NULL,
+  token_symbol TEXT NOT NULL,
+  asset_class TEXT NOT NULL DEFAULT 'TOKEN',
+  quantity_decimal TEXT NOT NULL,
+  unit_price_usd TEXT,
+  value_usd TEXT NOT NULL DEFAULT '0',
+  snapshot_at TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (organization_id) REFERENCES organizations(id),
+  FOREIGN KEY (wallet_id) REFERENCES wallets(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_assets_snapshots_org_time
+  ON assets_snapshots(organization_id, snapshot_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_assets_snapshots_org_symbol
+  ON assets_snapshots(organization_id, token_symbol, chain, snapshot_at DESC);
+
+CREATE TABLE IF NOT EXISTS positions (
+  id TEXT PRIMARY KEY,
+  organization_id TEXT NOT NULL,
+  wallet_id TEXT,
+  token_symbol TEXT NOT NULL,
+  asset_class TEXT NOT NULL DEFAULT 'TOKEN',
+  quantity_decimal TEXT NOT NULL,
+  cost_basis_usd TEXT,
+  market_value_usd TEXT,
+  reconciliation_status TEXT NOT NULL DEFAULT 'PENDING',
+  is_zero_balance INTEGER NOT NULL DEFAULT 0,
+  as_of TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (organization_id) REFERENCES organizations(id),
+  FOREIGN KEY (wallet_id) REFERENCES wallets(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_positions_org_as_of
+  ON positions(organization_id, as_of DESC);
+
+CREATE INDEX IF NOT EXISTS idx_positions_org_status
+  ON positions(organization_id, reconciliation_status, is_zero_balance);
+
+CREATE TABLE IF NOT EXISTS invoices (
+  id TEXT PRIMARY KEY,
+  organization_id TEXT NOT NULL,
+  customer_name TEXT NOT NULL,
+  invoice_number TEXT,
+  amount_usd TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'DRAFT',
+  due_date TEXT,
+  issued_at TEXT,
+  metadata_json TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (organization_id) REFERENCES organizations(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_invoices_org_status
+  ON invoices(organization_id, status, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS bills (
+  id TEXT PRIMARY KEY,
+  organization_id TEXT NOT NULL,
+  vendor_name TEXT NOT NULL,
+  bill_number TEXT,
+  amount_usd TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'OPEN',
+  due_date TEXT,
+  issued_at TEXT,
+  metadata_json TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (organization_id) REFERENCES organizations(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_bills_org_status
+  ON bills(organization_id, status, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS payment_events (
+  id TEXT PRIMARY KEY,
+  organization_id TEXT NOT NULL,
+  payment_kind TEXT NOT NULL,
+  payment_record_id TEXT NOT NULL,
+  event_type TEXT NOT NULL,
+  amount_usd TEXT,
+  occurred_at TEXT NOT NULL,
+  metadata_json TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (organization_id) REFERENCES organizations(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_payment_events_org_record
+  ON payment_events(organization_id, payment_kind, payment_record_id, occurred_at DESC);
+
+CREATE TABLE IF NOT EXISTS report_publications (
+  id TEXT PRIMARY KEY,
+  organization_id TEXT NOT NULL,
+  report_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  report_type TEXT NOT NULL,
+  visibility TEXT NOT NULL DEFAULT 'INTERNAL',
+  published_by TEXT,
+  published_at TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'PUBLISHED',
+  metadata_json TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (organization_id) REFERENCES organizations(id),
+  FOREIGN KEY (report_id) REFERENCES reports(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_report_publications_org_time
+  ON report_publications(organization_id, published_at DESC);
+
+CREATE TABLE IF NOT EXISTS framework_cases (
+  id TEXT PRIMARY KEY,
+  organization_id TEXT NOT NULL,
+  framework_code TEXT NOT NULL,
+  title TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'OPEN',
+  due_date TEXT,
+  owner TEXT,
+  payload_json TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (organization_id) REFERENCES organizations(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_framework_cases_org_code
+  ON framework_cases(organization_id, framework_code, status, created_at DESC);

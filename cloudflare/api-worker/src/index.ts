@@ -102,11 +102,20 @@ async function getDashboardSummary(
 ): Promise<JsonObject> {
   const fromDate = new Date(Date.now() - periodDays * 24 * 60 * 60 * 1000).toISOString();
 
-  const walletAgg = await first(
-    db,
-    "SELECT COUNT(*) AS wallet_count, COUNT(CASE WHEN is_active = 1 THEN 1 END) AS active_wallet_count FROM wallets WHERE organization_id = ?",
-    [organizationId]
-  );
+  let walletAgg: JsonObject | null;
+  try {
+    walletAgg = await first(
+      db,
+      "SELECT COUNT(*) AS wallet_count, COUNT(CASE WHEN is_active = 1 THEN 1 END) AS active_wallet_count FROM wallets WHERE organization_id = ?",
+      [organizationId]
+    );
+  } catch {
+    walletAgg = await first(
+      db,
+      "SELECT COUNT(*) AS wallet_count, COUNT(*) AS active_wallet_count FROM wallets WHERE organization_id = ?",
+      [organizationId]
+    );
+  }
 
   const txAgg = await first(
     db,
@@ -528,8 +537,8 @@ export default {
       if (method === "GET" && pathname === "/v1") {
         return json({
           name: "tres-finos-api",
-          version: "0.4.0",
-          stage: "prd-phase3-expanded-worker"
+          version: "0.6.0",
+          stage: "prd-scope-expanded-modules"
         });
       }
 
@@ -539,10 +548,31 @@ export default {
 
       // Organizations
       if (method === "GET" && pathname === "/v1/organizations") {
-        const items = await all(
-          db,
-          "SELECT id, name, base_currency, status, created_at, updated_at FROM organizations ORDER BY created_at DESC"
-        );
+        let items: JsonObject[];
+        try {
+          items = await all(
+            db,
+            "SELECT id, name, base_currency, status, created_at, updated_at FROM organizations ORDER BY created_at DESC"
+          );
+        } catch {
+          try {
+            const legacy = await all(
+              db,
+              "SELECT id, name, status, created_at, updated_at FROM organizations ORDER BY created_at DESC"
+            );
+            items = legacy.map((row) => ({ ...row, base_currency: "USD" }));
+          } catch {
+            const legacyCore = await all(
+              db,
+              "SELECT id, name, created_at, updated_at FROM organizations ORDER BY created_at DESC"
+            );
+            items = legacyCore.map((row) => ({
+              ...row,
+              base_currency: "USD",
+              status: "ACTIVE"
+            }));
+          }
+        }
         return json({ items });
       }
 
@@ -553,11 +583,23 @@ export default {
         }
 
         const organizationId = makeId("org");
-        await run(
-          db,
-          "INSERT INTO organizations (id, name, base_currency) VALUES (?, ?, ?)",
-          [organizationId, body.name.trim(), body.baseCurrency?.toUpperCase() || "USD"]
-        );
+        try {
+          await run(
+            db,
+            "INSERT INTO organizations (id, name, base_currency) VALUES (?, ?, ?)",
+            [organizationId, body.name.trim(), body.baseCurrency?.toUpperCase() || "USD"]
+          );
+        } catch (cause) {
+          const message = cause instanceof Error ? cause.message : "";
+          if (message.includes("base_currency")) {
+            await run(db, "INSERT INTO organizations (id, name) VALUES (?, ?)", [
+              organizationId,
+              body.name.trim()
+            ]);
+          } else {
+            throw cause;
+          }
+        }
 
         return json({ id: organizationId, name: body.name.trim() }, 201);
       }
@@ -569,11 +611,37 @@ export default {
           return error("invalid JSON body");
         }
 
-        await run(
-          db,
-          "UPDATE organizations SET name = COALESCE(?, name), status = COALESCE(?, status), base_currency = COALESCE(?, base_currency), updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-          [body.name?.trim() || null, body.status?.toUpperCase() || null, body.baseCurrency?.toUpperCase() || null, organizationId]
-        );
+        try {
+          await run(
+            db,
+            "UPDATE organizations SET name = COALESCE(?, name), status = COALESCE(?, status), base_currency = COALESCE(?, base_currency), updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            [
+              body.name?.trim() || null,
+              body.status?.toUpperCase() || null,
+              body.baseCurrency?.toUpperCase() || null,
+              organizationId
+            ]
+          );
+        } catch (cause) {
+          const message = cause instanceof Error ? cause.message : "";
+          if (message.includes("base_currency")) {
+            try {
+              await run(
+                db,
+                "UPDATE organizations SET name = COALESCE(?, name), status = COALESCE(?, status), updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                [body.name?.trim() || null, body.status?.toUpperCase() || null, organizationId]
+              );
+            } catch {
+              await run(
+                db,
+                "UPDATE organizations SET name = COALESCE(?, name), updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                [body.name?.trim() || null, organizationId]
+              );
+            }
+          } else {
+            throw cause;
+          }
+        }
 
         return json({ updated: true, id: organizationId });
       }
@@ -705,11 +773,21 @@ export default {
           return error("organizationId is required");
         }
 
-        const items = await all(
-          db,
-          "SELECT id, organization_id, chain, address, label, source_type, is_active, created_at, updated_at FROM wallets WHERE organization_id = ? ORDER BY created_at DESC",
-          [organizationId]
-        );
+        let items: JsonObject[];
+        try {
+          items = await all(
+            db,
+            "SELECT id, organization_id, chain, address, label, source_type, is_active, created_at, updated_at FROM wallets WHERE organization_id = ? ORDER BY created_at DESC",
+            [organizationId]
+          );
+        } catch {
+          const legacy = await all(
+            db,
+            "SELECT id, organization_id, chain, address, label, created_at, updated_at FROM wallets WHERE organization_id = ? ORDER BY created_at DESC",
+            [organizationId]
+          );
+          items = legacy.map((row) => ({ ...row, source_type: "ONCHAIN", is_active: 1 }));
+        }
         return json({ items });
       }
 
@@ -732,18 +810,37 @@ export default {
 
         const walletId = makeId("wal");
         try {
-          await run(
-            db,
-            "INSERT INTO wallets (id, organization_id, chain, address, label, source_type) VALUES (?, ?, ?, ?, ?, ?)",
-            [
-              walletId,
-              body.organizationId,
-              body.chain.toLowerCase(),
-              body.address.toLowerCase(),
-              body.label?.trim() || null,
-              body.sourceType?.toUpperCase() || "ONCHAIN"
-            ]
-          );
+          try {
+            await run(
+              db,
+              "INSERT INTO wallets (id, organization_id, chain, address, label, source_type) VALUES (?, ?, ?, ?, ?, ?)",
+              [
+                walletId,
+                body.organizationId,
+                body.chain.toLowerCase(),
+                body.address.toLowerCase(),
+                body.label?.trim() || null,
+                body.sourceType?.toUpperCase() || "ONCHAIN"
+              ]
+            );
+          } catch (cause) {
+            const message = cause instanceof Error ? cause.message : "";
+            if (message.includes("source_type")) {
+              await run(
+                db,
+                "INSERT INTO wallets (id, organization_id, chain, address, label) VALUES (?, ?, ?, ?, ?)",
+                [
+                  walletId,
+                  body.organizationId,
+                  body.chain.toLowerCase(),
+                  body.address.toLowerCase(),
+                  body.label?.trim() || null
+                ]
+              );
+            } else {
+              throw cause;
+            }
+          }
         } catch {
           return error("wallet already exists or references are invalid", 409);
         }
@@ -759,13 +856,883 @@ export default {
         }
 
         const isActive = parseBool(body.isActive);
-        await run(
-          db,
-          "UPDATE wallets SET label = COALESCE(?, label), source_type = COALESCE(?, source_type), is_active = COALESCE(?, is_active), updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-          [body.label?.trim() || null, body.sourceType?.toUpperCase() || null, isActive === null ? null : isActive ? 1 : 0, walletId]
-        );
+        try {
+          await run(
+            db,
+            "UPDATE wallets SET label = COALESCE(?, label), source_type = COALESCE(?, source_type), is_active = COALESCE(?, is_active), updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            [
+              body.label?.trim() || null,
+              body.sourceType?.toUpperCase() || null,
+              isActive === null ? null : isActive ? 1 : 0,
+              walletId
+            ]
+          );
+        } catch {
+          await run(db, "UPDATE wallets SET label = COALESCE(?, label), updated_at = CURRENT_TIMESTAMP WHERE id = ?", [
+            body.label?.trim() || null,
+            walletId
+          ]);
+        }
 
         return json({ updated: true, id: walletId });
+      }
+
+      // Accounts: contacts
+      if (method === "GET" && pathname === "/v1/accounts/contacts") {
+        const organizationId = url.searchParams.get("organizationId");
+        if (!organizationId) {
+          return error("organizationId is required");
+        }
+
+        const clauses: string[] = ["organization_id = ?"];
+        const params: unknown[] = [organizationId];
+
+        const status = url.searchParams.get("status");
+        if (status) {
+          clauses.push("status = ?");
+          params.push(upper(status));
+        }
+
+        const search = url.searchParams.get("search")?.trim();
+        if (search) {
+          clauses.push(
+            "(name LIKE ? OR COALESCE(email, '') LIKE ? OR COALESCE(wallet_address, '') LIKE ?)"
+          );
+          const pattern = `%${search}%`;
+          params.push(pattern, pattern, pattern);
+        }
+
+        params.push(parseLimit(url, 100, 500));
+        const items = await all(
+          db,
+          `SELECT
+            id, organization_id, name, email, wallet_address, counterparty_type,
+            status, notes, created_at, updated_at
+          FROM contacts
+          WHERE ${clauses.join(" AND ")}
+          ORDER BY created_at DESC
+          LIMIT ?`,
+          params
+        );
+        return json({ items });
+      }
+
+      if (method === "POST" && pathname === "/v1/accounts/contacts") {
+        const body = await readJson<{
+          organizationId?: string;
+          name?: string;
+          email?: string;
+          walletAddress?: string;
+          counterpartyType?: string;
+          status?: string;
+          notes?: string;
+        }>(request);
+        if (!body?.organizationId || !body.name?.trim()) {
+          return error("organizationId and name are required");
+        }
+        if (!(await organizationExists(db, body.organizationId))) {
+          return error("organization not found", 404);
+        }
+
+        const contactId = makeId("cnt");
+        await run(
+          db,
+          `INSERT INTO contacts (
+            id, organization_id, name, email, wallet_address, counterparty_type, status, notes
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            contactId,
+            body.organizationId,
+            body.name.trim(),
+            body.email?.trim().toLowerCase() || null,
+            body.walletAddress?.trim().toLowerCase() || null,
+            upper(body.counterpartyType || "EXTERNAL"),
+            upper(body.status || "ACTIVE"),
+            body.notes?.trim() || null
+          ]
+        );
+        return json({ id: contactId }, 201);
+      }
+
+      if (
+        method === "PATCH" &&
+        segments.length === 4 &&
+        segments[1] === "accounts" &&
+        segments[2] === "contacts"
+      ) {
+        const contactId = segments[3];
+        const body = await readJson<{
+          name?: string;
+          email?: string;
+          walletAddress?: string;
+          counterpartyType?: string;
+          status?: string;
+          notes?: string;
+        }>(request);
+        if (!body) {
+          return error("invalid JSON body");
+        }
+
+        await run(
+          db,
+          `UPDATE contacts SET
+            name = COALESCE(?, name),
+            email = COALESCE(?, email),
+            wallet_address = COALESCE(?, wallet_address),
+            counterparty_type = COALESCE(?, counterparty_type),
+            status = COALESCE(?, status),
+            notes = COALESCE(?, notes),
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?`,
+          [
+            body.name?.trim() || null,
+            body.email?.trim().toLowerCase() || null,
+            body.walletAddress?.trim().toLowerCase() || null,
+            body.counterpartyType ? upper(body.counterpartyType) : null,
+            body.status ? upper(body.status) : null,
+            body.notes?.trim() || null,
+            contactId
+          ]
+        );
+        return json({ updated: true, id: contactId });
+      }
+
+      // Accounts: custodians
+      if (method === "GET" && pathname === "/v1/accounts/custodians") {
+        const organizationId = url.searchParams.get("organizationId");
+        if (!organizationId) {
+          return error("organizationId is required");
+        }
+
+        const status = url.searchParams.get("status");
+        const params: unknown[] = [organizationId];
+        let query =
+          "SELECT id, organization_id, name, provider_type, account_reference, status, metadata_json, last_sync_at, created_at, updated_at FROM custodians WHERE organization_id = ?";
+        if (status) {
+          query += " AND status = ?";
+          params.push(upper(status));
+        }
+        query += " ORDER BY created_at DESC LIMIT ?";
+        params.push(parseLimit(url, 100, 500));
+        const items = await all(db, query, params);
+        return json({ items });
+      }
+
+      if (method === "POST" && pathname === "/v1/accounts/custodians") {
+        const body = await readJson<{
+          organizationId?: string;
+          name?: string;
+          providerType?: string;
+          accountReference?: string;
+          status?: string;
+          metadata?: JsonObject;
+        }>(request);
+        if (!body?.organizationId || !body.name?.trim()) {
+          return error("organizationId and name are required");
+        }
+        if (!(await organizationExists(db, body.organizationId))) {
+          return error("organization not found", 404);
+        }
+
+        const custodianId = makeId("cst");
+        await run(
+          db,
+          `INSERT INTO custodians (
+            id, organization_id, name, provider_type, account_reference, status, metadata_json
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            custodianId,
+            body.organizationId,
+            body.name.trim(),
+            upper(body.providerType || "CUSTODY"),
+            body.accountReference?.trim() || null,
+            upper(body.status || "ACTIVE"),
+            safeJsonString(body.metadata ?? {})
+          ]
+        );
+        return json({ id: custodianId }, 201);
+      }
+
+      if (
+        method === "PATCH" &&
+        segments.length === 4 &&
+        segments[1] === "accounts" &&
+        segments[2] === "custodians"
+      ) {
+        const custodianId = segments[3];
+        const body = await readJson<{
+          name?: string;
+          providerType?: string;
+          accountReference?: string;
+          status?: string;
+          metadata?: JsonObject;
+          lastSyncAt?: string;
+        }>(request);
+        if (!body) {
+          return error("invalid JSON body");
+        }
+
+        await run(
+          db,
+          `UPDATE custodians SET
+            name = COALESCE(?, name),
+            provider_type = COALESCE(?, provider_type),
+            account_reference = COALESCE(?, account_reference),
+            status = COALESCE(?, status),
+            metadata_json = COALESCE(?, metadata_json),
+            last_sync_at = COALESCE(?, last_sync_at),
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?`,
+          [
+            body.name?.trim() || null,
+            body.providerType ? upper(body.providerType) : null,
+            body.accountReference?.trim() || null,
+            body.status ? upper(body.status) : null,
+            body.metadata ? safeJsonString(body.metadata) : null,
+            body.lastSyncAt || null,
+            custodianId
+          ]
+        );
+        return json({ updated: true, id: custodianId });
+      }
+
+      // Accounts: unidentified addresses
+      if (method === "GET" && pathname === "/v1/accounts/unidentified-addresses") {
+        const organizationId = url.searchParams.get("organizationId");
+        if (!organizationId) {
+          return error("organizationId is required");
+        }
+
+        const clauses: string[] = ["organization_id = ?"];
+        const params: unknown[] = [organizationId];
+
+        const status = url.searchParams.get("status");
+        if (status) {
+          clauses.push("status = ?");
+          params.push(upper(status));
+        }
+
+        const chain = url.searchParams.get("chain");
+        if (chain) {
+          clauses.push("chain = ?");
+          params.push(lower(chain));
+        }
+
+        params.push(parseLimit(url, 100, 500));
+        const items = await all(
+          db,
+          `SELECT
+            id, organization_id, chain, address, label, status,
+            first_seen_at, last_seen_at, notes, created_at, updated_at
+          FROM unidentified_addresses
+          WHERE ${clauses.join(" AND ")}
+          ORDER BY updated_at DESC
+          LIMIT ?`,
+          params
+        );
+        return json({ items });
+      }
+
+      if (method === "POST" && pathname === "/v1/accounts/unidentified-addresses") {
+        const body = await readJson<{
+          organizationId?: string;
+          chain?: string;
+          address?: string;
+          label?: string;
+          status?: string;
+          firstSeenAt?: string;
+          lastSeenAt?: string;
+          notes?: string;
+        }>(request);
+        if (!body?.organizationId || !body.chain?.trim() || !body.address?.trim()) {
+          return error("organizationId, chain and address are required");
+        }
+        if (!(await organizationExists(db, body.organizationId))) {
+          return error("organization not found", 404);
+        }
+
+        const unknownId = makeId("unk");
+        try {
+          await run(
+            db,
+            `INSERT INTO unidentified_addresses (
+              id, organization_id, chain, address, label, status, first_seen_at, last_seen_at, notes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              unknownId,
+              body.organizationId,
+              lower(body.chain.trim()),
+              lower(body.address.trim()),
+              body.label?.trim() || null,
+              upper(body.status || "PENDING"),
+              body.firstSeenAt || nowIso(),
+              body.lastSeenAt || nowIso(),
+              body.notes?.trim() || null
+            ]
+          );
+        } catch {
+          return error("address already exists for this organization", 409);
+        }
+        return json({ id: unknownId }, 201);
+      }
+
+      if (
+        method === "PATCH" &&
+        segments.length === 4 &&
+        segments[1] === "accounts" &&
+        segments[2] === "unidentified-addresses"
+      ) {
+        const unknownId = segments[3];
+        const body = await readJson<{
+          label?: string;
+          status?: string;
+          notes?: string;
+          lastSeenAt?: string;
+        }>(request);
+        if (!body) {
+          return error("invalid JSON body");
+        }
+
+        await run(
+          db,
+          `UPDATE unidentified_addresses SET
+            label = COALESCE(?, label),
+            status = COALESCE(?, status),
+            notes = COALESCE(?, notes),
+            last_seen_at = COALESCE(?, last_seen_at),
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?`,
+          [
+            body.label?.trim() || null,
+            body.status ? upper(body.status) : null,
+            body.notes?.trim() || null,
+            body.lastSeenAt || null,
+            unknownId
+          ]
+        );
+        return json({ updated: true, id: unknownId });
+      }
+
+      // Assets
+      if (method === "GET" && pathname === "/v1/assets") {
+        const organizationId = url.searchParams.get("organizationId");
+        if (!organizationId) {
+          return error("organizationId is required");
+        }
+
+        const clauses: string[] = ["organization_id = ?"];
+        const params: unknown[] = [organizationId];
+
+        const chain = url.searchParams.get("chain");
+        if (chain) {
+          clauses.push("chain = ?");
+          params.push(lower(chain));
+        }
+
+        const tokenSymbol = url.searchParams.get("tokenSymbol");
+        if (tokenSymbol) {
+          clauses.push("token_symbol = ?");
+          params.push(upper(tokenSymbol));
+        }
+
+        const assetClass = url.searchParams.get("assetClass");
+        if (assetClass) {
+          clauses.push("asset_class = ?");
+          params.push(upper(assetClass));
+        }
+
+        params.push(parseLimit(url, 100, 500));
+        const snapshotItems = await all(
+          db,
+          `SELECT
+            token_symbol,
+            chain,
+            asset_class,
+            COUNT(DISTINCT wallet_id) AS wallet_count,
+            ROUND(SUM(CAST(quantity_decimal AS REAL)), 8) AS quantity_sum,
+            ROUND(SUM(CAST(value_usd AS REAL)), 2) AS value_usd_sum,
+            MAX(snapshot_at) AS latest_snapshot_at
+          FROM assets_snapshots
+          WHERE ${clauses.join(" AND ")}
+          GROUP BY token_symbol, chain, asset_class
+          ORDER BY value_usd_sum DESC
+          LIMIT ?`,
+          params
+        );
+
+        if (snapshotItems.length > 0) {
+          return json({ source: "snapshots", items: snapshotItems });
+        }
+
+        const ledgerParams: unknown[] = [organizationId, parseLimit(url, 100, 500)];
+        const fallbackItems = await all(
+          db,
+          `SELECT
+            COALESCE(token_symbol, 'UNKNOWN') AS token_symbol,
+            chain,
+            'TOKEN' AS asset_class,
+            COUNT(DISTINCT wallet_id) AS wallet_count,
+            ROUND(SUM(CAST(amount_decimal AS REAL)), 8) AS quantity_sum,
+            ROUND(SUM(COALESCE(CAST(fiat_value_usd AS REAL), 0)), 2) AS value_usd_sum,
+            MAX(occurred_at) AS latest_snapshot_at
+          FROM ledger_transactions
+          WHERE organization_id = ?
+          GROUP BY COALESCE(token_symbol, 'UNKNOWN'), chain
+          ORDER BY value_usd_sum DESC
+          LIMIT ?`,
+          ledgerParams
+        );
+        return json({ source: "transactions", items: fallbackItems });
+      }
+
+      if (
+        method === "GET" &&
+        segments.length === 4 &&
+        segments[1] === "assets" &&
+        segments[3] === "history"
+      ) {
+        const organizationId = url.searchParams.get("organizationId");
+        if (!organizationId) {
+          return error("organizationId is required");
+        }
+        const symbol = upper(segments[2]);
+
+        const items = await all(
+          db,
+          `SELECT
+            id, organization_id, wallet_id, chain, token_symbol, asset_class,
+            quantity_decimal, unit_price_usd, value_usd, snapshot_at, created_at
+          FROM assets_snapshots
+          WHERE organization_id = ? AND token_symbol = ?
+          ORDER BY snapshot_at DESC
+          LIMIT ?`,
+          [organizationId, symbol, parseLimit(url, 200, 1000)]
+        );
+
+        if (items.length > 0) {
+          return json({ symbol, source: "snapshots", items });
+        }
+
+        const fallback = await all(
+          db,
+          `SELECT
+            id, organization_id, wallet_id, chain, COALESCE(token_symbol, 'UNKNOWN') AS token_symbol,
+            'TOKEN' AS asset_class, amount_decimal AS quantity_decimal,
+            NULL AS unit_price_usd, fiat_value_usd AS value_usd, occurred_at AS snapshot_at, created_at
+          FROM ledger_transactions
+          WHERE organization_id = ? AND UPPER(COALESCE(token_symbol, '')) = ?
+          ORDER BY occurred_at DESC
+          LIMIT ?`,
+          [organizationId, symbol, parseLimit(url, 200, 1000)]
+        );
+        return json({ symbol, source: "transactions", items: fallback });
+      }
+
+      if (method === "POST" && pathname === "/v1/positions") {
+        const body = await readJson<{
+          organizationId?: string;
+          walletId?: string;
+          tokenSymbol?: string;
+          assetClass?: string;
+          quantityDecimal?: string;
+          costBasisUsd?: string;
+          marketValueUsd?: string;
+          reconciliationStatus?: string;
+          asOf?: string;
+        }>(request);
+        if (!body?.organizationId || !body.tokenSymbol?.trim() || !body.quantityDecimal) {
+          return error("organizationId, tokenSymbol and quantityDecimal are required");
+        }
+        if (!(await organizationExists(db, body.organizationId))) {
+          return error("organization not found", 404);
+        }
+        if (body.walletId && !(await walletExists(db, body.walletId))) {
+          return error("wallet not found", 404);
+        }
+
+        const quantity = asNumber(body.quantityDecimal);
+        const positionId = makeId("pos");
+        await run(
+          db,
+          `INSERT INTO positions (
+            id, organization_id, wallet_id, token_symbol, asset_class, quantity_decimal,
+            cost_basis_usd, market_value_usd, reconciliation_status, is_zero_balance, as_of
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            positionId,
+            body.organizationId,
+            body.walletId ?? null,
+            upper(body.tokenSymbol),
+            upper(body.assetClass || "TOKEN"),
+            body.quantityDecimal,
+            body.costBasisUsd ?? null,
+            body.marketValueUsd ?? null,
+            upper(body.reconciliationStatus || "PENDING"),
+            Math.abs(quantity) < 0.000000001 ? 1 : 0,
+            body.asOf || nowIso()
+          ]
+        );
+        return json({ id: positionId }, 201);
+      }
+
+      if (method === "GET" && pathname === "/v1/positions") {
+        const organizationId = url.searchParams.get("organizationId");
+        if (!organizationId) {
+          return error("organizationId is required");
+        }
+
+        const clauses: string[] = ["p.organization_id = ?"];
+        const params: unknown[] = [organizationId];
+
+        const showZero = parseBool(url.searchParams.get("showZero"));
+        if (showZero !== true) {
+          clauses.push("p.is_zero_balance = 0");
+        }
+
+        const reconciliationStatus = url.searchParams.get("reconciliationStatus");
+        if (reconciliationStatus) {
+          clauses.push("p.reconciliation_status = ?");
+          params.push(upper(reconciliationStatus));
+        }
+
+        params.push(parseLimit(url, 200, 800));
+        const items = await all(
+          db,
+          `SELECT
+            p.id, p.organization_id, p.wallet_id, p.token_symbol, p.asset_class,
+            p.quantity_decimal, p.cost_basis_usd, p.market_value_usd,
+            p.reconciliation_status, p.is_zero_balance, p.as_of,
+            p.created_at, p.updated_at,
+            w.chain AS wallet_chain, w.address AS wallet_address
+          FROM positions p
+          LEFT JOIN wallets w ON w.id = p.wallet_id
+          WHERE ${clauses.join(" AND ")}
+          ORDER BY p.as_of DESC
+          LIMIT ?`,
+          params
+        );
+        return json({ items });
+      }
+
+      if (method === "PATCH" && segments.length === 3 && segments[1] === "positions") {
+        const positionId = segments[2];
+        const body = await readJson<{
+          quantityDecimal?: string;
+          costBasisUsd?: string;
+          marketValueUsd?: string;
+          reconciliationStatus?: string;
+          asOf?: string;
+        }>(request);
+        if (!body) {
+          return error("invalid JSON body");
+        }
+
+        const parsedQty =
+          body.quantityDecimal !== undefined ? asNumber(body.quantityDecimal) : Number.NaN;
+        const zeroBalanceValue =
+          body.quantityDecimal === undefined
+            ? null
+            : Math.abs(parsedQty) < 0.000000001
+              ? 1
+              : 0;
+
+        await run(
+          db,
+          `UPDATE positions SET
+            quantity_decimal = COALESCE(?, quantity_decimal),
+            cost_basis_usd = COALESCE(?, cost_basis_usd),
+            market_value_usd = COALESCE(?, market_value_usd),
+            reconciliation_status = COALESCE(?, reconciliation_status),
+            is_zero_balance = COALESCE(?, is_zero_balance),
+            as_of = COALESCE(?, as_of),
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?`,
+          [
+            body.quantityDecimal ?? null,
+            body.costBasisUsd ?? null,
+            body.marketValueUsd ?? null,
+            body.reconciliationStatus ? upper(body.reconciliationStatus) : null,
+            zeroBalanceValue,
+            body.asOf ?? null,
+            positionId
+          ]
+        );
+        return json({ updated: true, id: positionId });
+      }
+
+      // Payments: invoices (AP/AR)
+      if (method === "GET" && pathname === "/v1/payments/invoices") {
+        const organizationId = url.searchParams.get("organizationId");
+        if (!organizationId) {
+          return error("organizationId is required");
+        }
+
+        const clauses: string[] = ["organization_id = ?"];
+        const params: unknown[] = [organizationId];
+
+        const status = url.searchParams.get("status");
+        if (status) {
+          clauses.push("status = ?");
+          params.push(upper(status));
+        }
+
+        const customer = url.searchParams.get("customer");
+        if (customer) {
+          clauses.push("customer_name LIKE ?");
+          params.push(`%${customer}%`);
+        }
+
+        params.push(parseLimit(url, 100, 500));
+        const items = await all(
+          db,
+          `SELECT
+            id, organization_id, customer_name, invoice_number, amount_usd,
+            status, due_date, issued_at, metadata_json, created_at, updated_at
+          FROM invoices
+          WHERE ${clauses.join(" AND ")}
+          ORDER BY created_at DESC
+          LIMIT ?`,
+          params
+        );
+        return json({ items });
+      }
+
+      if (method === "POST" && pathname === "/v1/payments/invoices") {
+        const body = await readJson<{
+          organizationId?: string;
+          customerName?: string;
+          invoiceNumber?: string;
+          amountUsd?: string;
+          status?: string;
+          dueDate?: string;
+          issuedAt?: string;
+          metadata?: JsonObject;
+        }>(request);
+        if (!body?.organizationId || !body.customerName?.trim() || !body.amountUsd) {
+          return error("organizationId, customerName and amountUsd are required");
+        }
+        if (!(await organizationExists(db, body.organizationId))) {
+          return error("organization not found", 404);
+        }
+
+        const invoiceId = makeId("inv");
+        await run(
+          db,
+          `INSERT INTO invoices (
+            id, organization_id, customer_name, invoice_number, amount_usd,
+            status, due_date, issued_at, metadata_json
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            invoiceId,
+            body.organizationId,
+            body.customerName.trim(),
+            body.invoiceNumber?.trim() || null,
+            body.amountUsd,
+            upper(body.status || "DRAFT"),
+            body.dueDate || null,
+            body.issuedAt || nowIso(),
+            safeJsonString(body.metadata ?? {})
+          ]
+        );
+
+        await run(
+          db,
+          `INSERT INTO payment_events (
+            id, organization_id, payment_kind, payment_record_id, event_type, amount_usd, occurred_at, metadata_json
+          ) VALUES (?, ?, 'INVOICE', ?, 'CREATED', ?, ?, ?)`,
+          [
+            makeId("pye"),
+            body.organizationId,
+            invoiceId,
+            body.amountUsd,
+            nowIso(),
+            safeJsonString({ source: "api" })
+          ]
+        );
+        return json({ id: invoiceId }, 201);
+      }
+
+      if (
+        method === "PATCH" &&
+        segments.length === 4 &&
+        segments[1] === "payments" &&
+        segments[2] === "invoices"
+      ) {
+        const invoiceId = segments[3];
+        const body = await readJson<{
+          customerName?: string;
+          invoiceNumber?: string;
+          amountUsd?: string;
+          status?: string;
+          dueDate?: string;
+          issuedAt?: string;
+          metadata?: JsonObject;
+        }>(request);
+        if (!body) {
+          return error("invalid JSON body");
+        }
+
+        await run(
+          db,
+          `UPDATE invoices SET
+            customer_name = COALESCE(?, customer_name),
+            invoice_number = COALESCE(?, invoice_number),
+            amount_usd = COALESCE(?, amount_usd),
+            status = COALESCE(?, status),
+            due_date = COALESCE(?, due_date),
+            issued_at = COALESCE(?, issued_at),
+            metadata_json = COALESCE(?, metadata_json),
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?`,
+          [
+            body.customerName?.trim() || null,
+            body.invoiceNumber?.trim() || null,
+            body.amountUsd ?? null,
+            body.status ? upper(body.status) : null,
+            body.dueDate ?? null,
+            body.issuedAt ?? null,
+            body.metadata ? safeJsonString(body.metadata) : null,
+            invoiceId
+          ]
+        );
+        return json({ updated: true, id: invoiceId });
+      }
+
+      if (method === "GET" && pathname === "/v1/payments/bills") {
+        const organizationId = url.searchParams.get("organizationId");
+        if (!organizationId) {
+          return error("organizationId is required");
+        }
+
+        const clauses: string[] = ["organization_id = ?"];
+        const params: unknown[] = [organizationId];
+
+        const status = url.searchParams.get("status");
+        if (status) {
+          clauses.push("status = ?");
+          params.push(upper(status));
+        }
+
+        const vendor = url.searchParams.get("vendor");
+        if (vendor) {
+          clauses.push("vendor_name LIKE ?");
+          params.push(`%${vendor}%`);
+        }
+
+        params.push(parseLimit(url, 100, 500));
+        const items = await all(
+          db,
+          `SELECT
+            id, organization_id, vendor_name, bill_number, amount_usd,
+            status, due_date, issued_at, metadata_json, created_at, updated_at
+          FROM bills
+          WHERE ${clauses.join(" AND ")}
+          ORDER BY created_at DESC
+          LIMIT ?`,
+          params
+        );
+        return json({ items });
+      }
+
+      if (method === "POST" && pathname === "/v1/payments/bills") {
+        const body = await readJson<{
+          organizationId?: string;
+          vendorName?: string;
+          billNumber?: string;
+          amountUsd?: string;
+          status?: string;
+          dueDate?: string;
+          issuedAt?: string;
+          metadata?: JsonObject;
+        }>(request);
+        if (!body?.organizationId || !body.vendorName?.trim() || !body.amountUsd) {
+          return error("organizationId, vendorName and amountUsd are required");
+        }
+        if (!(await organizationExists(db, body.organizationId))) {
+          return error("organization not found", 404);
+        }
+
+        const billId = makeId("bil");
+        await run(
+          db,
+          `INSERT INTO bills (
+            id, organization_id, vendor_name, bill_number, amount_usd,
+            status, due_date, issued_at, metadata_json
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            billId,
+            body.organizationId,
+            body.vendorName.trim(),
+            body.billNumber?.trim() || null,
+            body.amountUsd,
+            upper(body.status || "OPEN"),
+            body.dueDate || null,
+            body.issuedAt || nowIso(),
+            safeJsonString(body.metadata ?? {})
+          ]
+        );
+
+        await run(
+          db,
+          `INSERT INTO payment_events (
+            id, organization_id, payment_kind, payment_record_id, event_type, amount_usd, occurred_at, metadata_json
+          ) VALUES (?, ?, 'BILL', ?, 'CREATED', ?, ?, ?)`,
+          [
+            makeId("pye"),
+            body.organizationId,
+            billId,
+            body.amountUsd,
+            nowIso(),
+            safeJsonString({ source: "api" })
+          ]
+        );
+        return json({ id: billId }, 201);
+      }
+
+      if (
+        method === "PATCH" &&
+        segments.length === 4 &&
+        segments[1] === "payments" &&
+        segments[2] === "bills"
+      ) {
+        const billId = segments[3];
+        const body = await readJson<{
+          vendorName?: string;
+          billNumber?: string;
+          amountUsd?: string;
+          status?: string;
+          dueDate?: string;
+          issuedAt?: string;
+          metadata?: JsonObject;
+        }>(request);
+        if (!body) {
+          return error("invalid JSON body");
+        }
+
+        await run(
+          db,
+          `UPDATE bills SET
+            vendor_name = COALESCE(?, vendor_name),
+            bill_number = COALESCE(?, bill_number),
+            amount_usd = COALESCE(?, amount_usd),
+            status = COALESCE(?, status),
+            due_date = COALESCE(?, due_date),
+            issued_at = COALESCE(?, issued_at),
+            metadata_json = COALESCE(?, metadata_json),
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?`,
+          [
+            body.vendorName?.trim() || null,
+            body.billNumber?.trim() || null,
+            body.amountUsd ?? null,
+            body.status ? upper(body.status) : null,
+            body.dueDate ?? null,
+            body.issuedAt ?? null,
+            body.metadata ? safeJsonString(body.metadata) : null,
+            billId
+          ]
+        );
+        return json({ updated: true, id: billId });
       }
 
       // Transactions
@@ -1515,6 +2482,26 @@ export default {
         return json({ id: reportId }, 201);
       }
 
+      if (method === "GET" && pathname === "/v1/reports/published") {
+        const organizationId = url.searchParams.get("organizationId");
+        if (!organizationId) {
+          return error("organizationId is required");
+        }
+
+        const items = await all(
+          db,
+          `SELECT
+            id, organization_id, report_id, title, report_type, visibility,
+            published_by, published_at, status, metadata_json, created_at, updated_at
+          FROM report_publications
+          WHERE organization_id = ?
+          ORDER BY published_at DESC
+          LIMIT ?`,
+          [organizationId, parseLimit(url, 100, 500)]
+        );
+        return json({ items });
+      }
+
       if (method === "GET" && segments.length === 3 && segments[1] === "reports") {
         const reportId = segments[2];
         const report = await first(db, "SELECT * FROM reports WHERE id = ?", [reportId]);
@@ -1522,6 +2509,58 @@ export default {
           return error("report not found", 404);
         }
         return json({ report });
+      }
+
+      if (
+        method === "POST" &&
+        segments.length === 4 &&
+        segments[1] === "reports" &&
+        segments[3] === "publish"
+      ) {
+        const reportId = segments[2];
+        const body = await readJson<{
+          visibility?: string;
+          publishedBy?: string;
+          status?: string;
+          metadata?: JsonObject;
+        }>(request);
+
+        const report = await first(
+          db,
+          "SELECT id, organization_id, report_type, title, status FROM reports WHERE id = ?",
+          [reportId]
+        );
+        if (!report) {
+          return error("report not found", 404);
+        }
+
+        const publicationId = makeId("rpb");
+        await run(
+          db,
+          `INSERT INTO report_publications (
+            id, organization_id, report_id, title, report_type, visibility,
+            published_by, published_at, status, metadata_json
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            publicationId,
+            String(report.organization_id),
+            reportId,
+            String(report.title),
+            String(report.report_type),
+            upper(body?.visibility || "INTERNAL"),
+            body?.publishedBy?.trim() || null,
+            nowIso(),
+            upper(body?.status || "PUBLISHED"),
+            safeJsonString(body?.metadata ?? {})
+          ]
+        );
+
+        await run(
+          db,
+          "UPDATE reports SET status = 'PUBLISHED', updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+          [reportId]
+        );
+        return json({ id: publicationId, reportId, status: "PUBLISHED" }, 201);
       }
 
       if (
@@ -1919,6 +2958,249 @@ export default {
         );
 
         return json({ webhookId, eventId, simulated: true }, 201);
+      }
+
+      // Integrations: Xero
+      if (method === "GET" && pathname === "/v1/integrations/xero") {
+        const organizationId = url.searchParams.get("organizationId");
+        if (!organizationId) {
+          return error("organizationId is required");
+        }
+        const items = await all(
+          db,
+          "SELECT * FROM erp_connections WHERE organization_id = ? AND system_name = 'XERO' ORDER BY created_at DESC LIMIT ?",
+          [organizationId, parseLimit(url, 100, 300)]
+        );
+        return json({ items });
+      }
+
+      if (method === "POST" && pathname === "/v1/integrations/xero") {
+        const body = await readJson<{
+          organizationId?: string;
+          config?: JsonObject;
+          status?: string;
+        }>(request);
+        if (!body?.organizationId) {
+          return error("organizationId is required");
+        }
+        const connectionId = makeId("xro");
+        await run(
+          db,
+          "INSERT INTO erp_connections (id, organization_id, system_name, status, config_json) VALUES (?, ?, 'XERO', ?, ?)",
+          [
+            connectionId,
+            body.organizationId,
+            upper(body.status || "CONNECTED"),
+            safeJsonString(body.config ?? {})
+          ]
+        );
+        return json({ id: connectionId }, 201);
+      }
+
+      if (
+        method === "PATCH" &&
+        segments.length === 4 &&
+        segments[1] === "integrations" &&
+        segments[2] === "xero"
+      ) {
+        const connectionId = segments[3];
+        const body = await readJson<{ status?: string; config?: JsonObject; lastSyncAt?: string }>(
+          request
+        );
+        if (!body) {
+          return error("invalid JSON body");
+        }
+        await run(
+          db,
+          `UPDATE erp_connections SET
+            status = COALESCE(?, status),
+            config_json = COALESCE(?, config_json),
+            last_sync_at = COALESCE(?, last_sync_at),
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = ? AND system_name = 'XERO'`,
+          [
+            body.status ? upper(body.status) : null,
+            body.config ? safeJsonString(body.config) : null,
+            body.lastSyncAt || null,
+            connectionId
+          ]
+        );
+        return json({ updated: true, id: connectionId });
+      }
+
+      // Integrations: QuickBooks
+      if (method === "GET" && pathname === "/v1/integrations/quickbooks") {
+        const organizationId = url.searchParams.get("organizationId");
+        if (!organizationId) {
+          return error("organizationId is required");
+        }
+        const items = await all(
+          db,
+          "SELECT * FROM erp_connections WHERE organization_id = ? AND system_name = 'QUICKBOOKS' ORDER BY created_at DESC LIMIT ?",
+          [organizationId, parseLimit(url, 100, 300)]
+        );
+        return json({ items });
+      }
+
+      if (method === "POST" && pathname === "/v1/integrations/quickbooks") {
+        const body = await readJson<{
+          organizationId?: string;
+          config?: JsonObject;
+          status?: string;
+        }>(request);
+        if (!body?.organizationId) {
+          return error("organizationId is required");
+        }
+        const connectionId = makeId("qbk");
+        await run(
+          db,
+          "INSERT INTO erp_connections (id, organization_id, system_name, status, config_json) VALUES (?, ?, 'QUICKBOOKS', ?, ?)",
+          [
+            connectionId,
+            body.organizationId,
+            upper(body.status || "CONNECTED"),
+            safeJsonString(body.config ?? {})
+          ]
+        );
+        return json({ id: connectionId }, 201);
+      }
+
+      if (
+        method === "PATCH" &&
+        segments.length === 4 &&
+        segments[1] === "integrations" &&
+        segments[2] === "quickbooks"
+      ) {
+        const connectionId = segments[3];
+        const body = await readJson<{ status?: string; config?: JsonObject; lastSyncAt?: string }>(
+          request
+        );
+        if (!body) {
+          return error("invalid JSON body");
+        }
+        await run(
+          db,
+          `UPDATE erp_connections SET
+            status = COALESCE(?, status),
+            config_json = COALESCE(?, config_json),
+            last_sync_at = COALESCE(?, last_sync_at),
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = ? AND system_name = 'QUICKBOOKS'`,
+          [
+            body.status ? upper(body.status) : null,
+            body.config ? safeJsonString(body.config) : null,
+            body.lastSyncAt || null,
+            connectionId
+          ]
+        );
+        return json({ updated: true, id: connectionId });
+      }
+
+      // Frameworks
+      if (method === "GET" && pathname === "/v1/frameworks/catalog") {
+        return json({
+          items: [
+            { code: "1099", name: "1099 Form", status: "ACTIVE" },
+            { code: "1099-DA", name: "1099-DA", status: "COMING_SOON" },
+            { code: "AUDIT_PREP", name: "Audit Prep", status: "COMING_SOON" },
+            { code: "SODA", name: "SoDA", status: "COMING_SOON" },
+            { code: "MICA", name: "MiCA", status: "COMING_SOON" },
+            { code: "DORA", name: "DORA", status: "COMING_SOON" }
+          ]
+        });
+      }
+
+      if (method === "GET" && pathname === "/v1/frameworks/1099") {
+        const organizationId = url.searchParams.get("organizationId");
+        if (!organizationId) {
+          return error("organizationId is required");
+        }
+        const status = url.searchParams.get("status");
+        const params: unknown[] = [organizationId];
+        let query =
+          "SELECT id, organization_id, framework_code, title, status, due_date, owner, payload_json, created_at, updated_at FROM framework_cases WHERE organization_id = ? AND framework_code = '1099'";
+        if (status) {
+          query += " AND status = ?";
+          params.push(upper(status));
+        }
+        query += " ORDER BY created_at DESC LIMIT ?";
+        params.push(parseLimit(url, 100, 500));
+        const items = await all(db, query, params);
+        return json({ items });
+      }
+
+      if (method === "POST" && pathname === "/v1/frameworks/1099") {
+        const body = await readJson<{
+          organizationId?: string;
+          title?: string;
+          status?: string;
+          dueDate?: string;
+          owner?: string;
+          payload?: JsonObject;
+        }>(request);
+        if (!body?.organizationId || !body.title?.trim()) {
+          return error("organizationId and title are required");
+        }
+        if (!(await organizationExists(db, body.organizationId))) {
+          return error("organization not found", 404);
+        }
+
+        const caseId = makeId("frm");
+        await run(
+          db,
+          `INSERT INTO framework_cases (
+            id, organization_id, framework_code, title, status, due_date, owner, payload_json
+          ) VALUES (?, ?, '1099', ?, ?, ?, ?, ?)`,
+          [
+            caseId,
+            body.organizationId,
+            body.title.trim(),
+            upper(body.status || "OPEN"),
+            body.dueDate || null,
+            body.owner?.trim() || null,
+            safeJsonString(body.payload ?? {})
+          ]
+        );
+        return json({ id: caseId }, 201);
+      }
+
+      if (
+        method === "PATCH" &&
+        segments.length === 4 &&
+        segments[1] === "frameworks" &&
+        segments[2] === "1099"
+      ) {
+        const caseId = segments[3];
+        const body = await readJson<{
+          title?: string;
+          status?: string;
+          dueDate?: string;
+          owner?: string;
+          payload?: JsonObject;
+        }>(request);
+        if (!body) {
+          return error("invalid JSON body");
+        }
+        await run(
+          db,
+          `UPDATE framework_cases SET
+            title = COALESCE(?, title),
+            status = COALESCE(?, status),
+            due_date = COALESCE(?, due_date),
+            owner = COALESCE(?, owner),
+            payload_json = COALESCE(?, payload_json),
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = ? AND framework_code = '1099'`,
+          [
+            body.title?.trim() || null,
+            body.status ? upper(body.status) : null,
+            body.dueDate ?? null,
+            body.owner?.trim() || null,
+            body.payload ? safeJsonString(body.payload) : null,
+            caseId
+          ]
+        );
+        return json({ updated: true, id: caseId });
       }
 
       // ERP integrations
