@@ -259,6 +259,80 @@ npx wrangler d1 execute tres-finos-db \
   - Shell/navigation/modules: `apps/web/app/page.tsx`
   - Design tokens/background/motion: `apps/web/app/globals.css`
 
+## 14) AI Handover (GitHub Continuation)
+
+This section is optimized for the next AI coding agent to continue delivery with minimal context loss.
+
+### A. Snapshot (as of February 18, 2026)
+
+- Default branch: `main`
+- Remote: `https://github.com/KunanonJ/tres-finos.git`
+- Latest integration commit for expanded PRD scope: `267a207`
+- Production API deployed and validated:
+  - `https://tres-finos-api.chameleon-finance.workers.dev`
+  - Worker includes compatibility fallbacks for legacy D1 column drift.
+- D1 schema was applied remotely from:
+  - `cloudflare/api-worker/schema.sql`
+- E2E status:
+  - `6/6` Playwright smoke tests passing via `tests/e2e/smoke.spec.ts`
+
+### B. Current Production Gap
+
+- API is current.
+- Web Pages runtime may still serve an older static build if `apps/web/out` is stale.
+- If this happens, rebuild and redeploy web immediately (see section C).
+
+### C. Resume Commands (strict order)
+
+```bash
+# 1) Ensure dependencies
+npm install
+
+# 2) Rebuild web static output
+npm run build -w @tres/web -- --no-lint
+
+# 3) Deploy API (idempotent)
+CLOUDFLARE_ACCOUNT_ID=<account_id> \
+  npx wrangler deploy --config cloudflare/api-worker/wrangler.toml
+
+# 4) Apply latest D1 schema (idempotent)
+CLOUDFLARE_ACCOUNT_ID=<account_id> \
+  npx wrangler d1 execute tres-finos-db --remote --file cloudflare/api-worker/schema.sql
+
+# 5) Deploy web static output
+CLOUDFLARE_ACCOUNT_ID=<account_id> \
+  npx wrangler pages deploy apps/web/out --project-name=tres-finos --branch=main --commit-dirty=true
+
+# 6) Validate
+npm run test:e2e
+```
+
+### D. Verification Checklist
+
+1. `GET /health` returns 200 from production Worker.
+2. `GET /v1` returns API version/stage.
+3. UI nav includes new PRD modules: Accounts, Assets, Positions, Payments, Integrations, Frameworks.
+4. API routes for reports publish + frameworks + Xero/QuickBooks return 2xx.
+5. Playwright smoke tests pass locally against production API.
+
+### E. If Build/Deploy Is Blocked
+
+- If `next build` stalls with no output:
+  - run with `CI=1 NEXT_TELEMETRY_DISABLED=1`
+  - retry in a fresh shell/session
+  - avoid parallel `next build` processes
+- If Wrangler auth/network fails:
+  - set `CLOUDFLARE_API_TOKEN`
+  - verify DNS can resolve `api.cloudflare.com` and `dash.cloudflare.com`
+
+### F. High-Value Next Tasks
+
+1. Split `cloudflare/api-worker/src/index.ts` into modular route/service files.
+2. Add authentication + strict org-level authorization.
+3. Replace fallback compatibility paths once production D1 is fully normalized.
+4. Break `apps/web/app/page.tsx` into route-level pages/components.
+5. Add API contract tests for each module endpoint.
+
 ---
 
 If you are onboarding a new engineer, ask them to run sections **5, 8, and 10** first.
