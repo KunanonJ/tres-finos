@@ -27,7 +27,9 @@ jobs:
       - name: Build
         run: npm run build
 
+  # Opt-in: set repository variable E2E_ENABLED=true when E2E_BASE_URL / E2E_API_URL resolve and the API is deployed.
   e2e:
+    if: vars.E2E_ENABLED == 'true'
     runs-on: ubuntu-latest
     needs: build
     env:
