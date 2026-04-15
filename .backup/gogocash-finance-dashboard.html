@@ -1,0 +1,1312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GoGoCash · Finance Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#070710;--bg-card:#0D0D1C;--bg-card2:#111122;--bg-hover:rgba(255,255,255,0.025);
+  --border:#1A1A30;--border-lt:#242440;
+  --g:#00E5B0;--g-dim:rgba(0,229,176,.12);--g-glow:rgba(0,229,176,.22);
+  --r:#FF4F6E;--r-dim:rgba(255,79,110,.12);
+  --y:#FFB347;--y-dim:rgba(255,179,71,.12);
+  --b:#6B6BFF;--b-dim:rgba(107,107,255,.12);
+  --text:#E0E0F0;--t2:#8080A0;--t3:#383850;
+  --mono:'Space Mono',monospace;--sans:'Outfit',sans-serif;
+  --r8:8px;--r12:12px;--r16:16px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:linear-gradient(rgba(0,229,176,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,176,.025) 1px,transparent 1px);background-size:52px 52px;pointer-events:none;z-index:0}
+.shell{position:relative;z-index:1;max-width:1340px;margin:0 auto;padding:0 24px 80px}
+header{display:flex;align-items:center;justify-content:space-between;padding:22px 0 18px;border-bottom:1px solid var(--border);margin-bottom:24px;flex-wrap:wrap;gap:12px}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-mark{width:34px;height:34px;background:var(--g);border-radius:10px;display:grid;place-items:center;font-family:var(--mono);font-size:13px;font-weight:700;color:#070710}
+.logo-text{font-size:17px;font-weight:700;letter-spacing:-.5px}.logo-text span{color:var(--g)}
+.header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.month-pills{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.month-pill{font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;border:1px solid var(--g-glow);color:var(--g);background:var(--g-dim);font-family:var(--mono)}
+.btn{display:inline-flex;align-items:center;gap:6px;font-family:var(--sans);font-size:12px;font-weight:700;padding:8px 16px;border-radius:var(--r8);border:1px solid;cursor:pointer;transition:all .15s}
+.btn-primary{background:var(--g);color:#070710;border-color:var(--g)}.btn-primary:hover{opacity:.85}
+.btn-ghost{background:transparent;color:var(--t2);border-color:var(--border)}.btn-ghost:hover{border-color:var(--g-glow);color:var(--g);background:var(--g-dim)}
+.btn-sm{font-size:11px;padding:5px 12px}
+.upload-section{margin-bottom:22px}
+.upload-zone{border:1.5px dashed var(--border-lt);border-radius:var(--r12);padding:32px 24px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg-card);position:relative;overflow:hidden}
+.upload-zone::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(0,229,176,.06) 0%,transparent 70%);pointer-events:none}
+.upload-zone.drag-over,.upload-zone:hover{border-color:var(--g);background:rgba(0,229,176,.04)}
+.upload-zone .icon{font-size:28px;display:block;margin-bottom:8px}
+.upload-zone h3{font-size:14px;font-weight:600;margin-bottom:4px}
+.upload-zone p{font-size:12px;color:var(--t2);margin-bottom:16px}
+#fileInput{display:none}
+.file-queue{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.file-item{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r8);font-size:12px}
+.file-icon{font-size:16px;flex-shrink:0}
+.file-info{flex:1;min-width:0}
+.file-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.file-sub{color:var(--t2);font-size:11px;margin-top:1px}
+.file-status{font-size:10px;font-weight:700;font-family:var(--mono);padding:3px 8px;border-radius:12px;flex-shrink:0}
+.st-pending{background:var(--border);color:var(--t2)}.st-processing{background:var(--y-dim);color:var(--y)}.st-done{background:var(--g-dim);color:var(--g)}.st-error{background:var(--r-dim);color:var(--r)}
+.file-spinner{width:14px;height:14px;border:2px solid var(--y-dim);border-top-color:var(--y);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.alert{display:none;padding:12px 16px;border-radius:var(--r8);font-size:12px;margin-bottom:16px;align-items:center;gap:10px}
+.alert.on{display:flex}.alert-e{background:var(--r-dim);border:1px solid rgba(255,79,110,.3);color:var(--r)}
+.tabs{display:flex;gap:2px;margin-bottom:20px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r12);padding:4px;width:fit-content}
+.tab-btn{font-family:var(--sans);font-size:12px;font-weight:600;padding:7px 18px;border-radius:var(--r8);border:none;cursor:pointer;color:var(--t2);background:transparent;transition:all .15s;white-space:nowrap}
+.tab-btn.active{background:var(--g);color:#070710}.tab-btn:hover:not(.active){color:var(--text);background:var(--bg-hover)}
+.tab-panel{display:none}.tab-panel.active{display:block}
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px}
+@media(max-width:1100px){.kpi-row{grid-template-columns:repeat(3,1fr)}}@media(max-width:700px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r12);padding:18px;position:relative;overflow:hidden}
+.kpi::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--kc,transparent);border-radius:2px 2px 0 0}
+.kpi.cg{--kc:var(--g)}.kpi.cr{--kc:var(--r)}.kpi.cy{--kc:var(--y)}.kpi.cb{--kc:var(--b)}
+.kpi-label{font-size:10px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px;display:flex;align-items:center;gap:5px}
+.kpi-dot{width:5px;height:5px;border-radius:50%;background:var(--kc,var(--t3))}
+.kpi-val{font-family:var(--mono);font-size:20px;font-weight:700;letter-spacing:-1px;margin-bottom:4px}
+.kpi-val.pos{color:var(--g)}.kpi-val.neg{color:var(--r)}.kpi-val.warn{color:var(--y)}
+.kpi-sub{font-size:11px;color:var(--t2)}.kpi-delta{font-size:10px;font-weight:700;font-family:var(--mono);margin-top:4px}
+.kpi-delta.up{color:var(--g)}.kpi-delta.dn{color:var(--r)}
+.chart-row{display:grid;grid-template-columns:1fr 380px;gap:16px;margin-bottom:20px}
+@media(max-width:1000px){.chart-row{grid-template-columns:1fr}}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r16);padding:20px}
+.card-title{font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.7px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between}
+.card-badge{font-size:10px;background:var(--border);color:var(--t2);padding:2px 8px;border-radius:12px;text-transform:none;letter-spacing:0;font-weight:500}
+canvas{display:block;width:100%}
+.insights-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px}
+@media(max-width:700px){.insights-grid{grid-template-columns:1fr}}
+.insight{padding:14px 16px;border-radius:var(--r12);border:1px solid;display:flex;gap:12px;align-items:flex-start}
+.insight.warn{background:var(--y-dim);border-color:rgba(255,179,71,.3)}.insight.danger{background:var(--r-dim);border-color:rgba(255,79,110,.3)}.insight.ok{background:var(--g-dim);border-color:var(--g-glow)}.insight.info{background:var(--b-dim);border-color:rgba(107,107,255,.3)}
+.insight-icon{font-size:18px;flex-shrink:0;margin-top:1px}
+.insight-title{font-size:12px;font-weight:700;margin-bottom:3px}
+.insight-body{font-size:11px;color:var(--t2);line-height:1.5}
+.month-table-wrap{overflow-x:auto;border-radius:var(--r12);border:1px solid var(--border)}
+.month-table{width:100%;border-collapse:collapse;font-size:12px}
+.month-table th{background:var(--bg-card2);padding:10px 16px;text-align:right;font-size:10px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.7px;border-bottom:1px solid var(--border);white-space:nowrap}
+.month-table th:first-child{text-align:left}
+.month-table td{padding:10px 16px;border-bottom:1px solid var(--border);text-align:right;font-family:var(--mono);font-size:12px}
+.month-table td:first-child{text-align:left;font-family:var(--sans);color:var(--text);font-weight:500}
+.month-table tr:last-child td{border-bottom:none}
+.month-table tr.sec-hdr td{background:var(--bg-card2);color:var(--t2);font-family:var(--sans);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;padding:6px 16px}
+.month-table tr.tot td{font-weight:700;border-top:1px solid var(--border-lt)}
+.pos{color:var(--g)}.neg{color:var(--r)}.warn-c{color:var(--y)}
+.mom{font-size:10px;margin-left:6px;opacity:.7}
+.tx-wrap{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r16);overflow:hidden;margin-bottom:20px}
+.tx-toolbar{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.tx-title{font-size:11px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.7px;flex:0 0 auto}
+.search-box{display:flex;align-items:center;gap:7px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r8);padding:6px 11px;flex:1;min-width:140px;max-width:220px}
+.search-box input{background:none;border:none;outline:none;color:var(--text);font-family:var(--sans);font-size:12px;width:100%}
+.search-box input::placeholder{color:var(--t3)}
+.flt-row{display:flex;gap:5px;flex-wrap:wrap}
+.flt{font-size:10px;font-weight:700;padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--t2);cursor:pointer;font-family:var(--sans);transition:all .15s}
+.flt.on{background:var(--g-dim);border-color:var(--g-glow);color:var(--g)}
+.flt.rn{background:var(--r-dim);border-color:rgba(255,79,110,.3);color:var(--r)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{background:var(--bg-card2);padding:9px 14px;text-align:left;font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
+thead th:hover{color:var(--t2)}thead th.sorted{color:var(--g)}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+tbody tr:last-child{border-bottom:none}tbody tr:hover{background:var(--bg-hover)}
+td{padding:10px 14px;vertical-align:middle}
+.td-date{font-family:var(--mono);font-size:10px;color:var(--t2);white-space:nowrap}
+.td-mo{font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;background:var(--border);color:var(--t2);font-family:var(--mono);white-space:nowrap}
+.td-code{font-family:var(--mono);font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;background:var(--bg-card2);color:var(--t2)}
+.td-desc{color:var(--text);max-width:240px;line-height:1.4}
+.td-desc small{display:block;color:var(--t2);font-size:10px;font-family:var(--mono);margin-top:1px}
+.td-cat{font-size:10px;padding:2px 7px;border-radius:4px;font-weight:600;white-space:nowrap}
+.td-amt{font-family:var(--mono);font-size:12px;font-weight:700;text-align:right;white-space:nowrap}
+.td-bal{font-family:var(--mono);font-size:11px;text-align:right;color:var(--t2);white-space:nowrap}
+.badge-in{display:inline-block;padding:2px 6px;border-radius:4px;background:var(--g-dim);color:var(--g);font-size:9px;font-weight:700;font-family:var(--mono)}
+.badge-out{display:inline-block;padding:2px 6px;border-radius:4px;background:var(--r-dim);color:var(--r);font-size:9px;font-weight:700;font-family:var(--mono)}
+.pagination{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-top:1px solid var(--border);font-size:11px;color:var(--t2)}
+.page-btns{display:flex;gap:4px}
+.pg{padding:3px 9px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--t2);cursor:pointer;font-family:var(--sans);font-size:11px;transition:all .15s}
+.pg:hover,.pg.on{background:var(--g-dim);border-color:var(--g-glow);color:var(--g)}.pg:disabled{opacity:.3;cursor:default}
+.cat-list{display:flex;flex-direction:column;gap:11px}
+.cat-item{display:flex;flex-direction:column;gap:5px}
+.cat-hdr{display:flex;justify-content:space-between;font-size:12px}
+.cat-name{color:var(--t2);font-weight:500}.cat-amt{font-family:var(--mono);font-weight:700;font-size:11px}
+.cat-bg{height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.cat-fill{height:100%;border-radius:3px;transition:width .6s cubic-bezier(.16,1,.3,1)}
+.no-data{text-align:center;padding:80px 20px;color:var(--t2)}
+.no-data .icon{font-size:36px;display:block;margin-bottom:12px}
+.no-data p{font-size:13px}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<header>
+  <div class="logo">
+    <div class="logo-mark">GG</div>
+    <div class="logo-text">Gogo<span>Cash</span> <span style="color:var(--t3);font-size:13px;font-weight:400">Finance</span></div>
+  </div>
+  <div class="header-right">
+    <div class="month-pills" id="monthPills"></div>
+    <button class="btn btn-ghost btn-sm" id="exportBtn" style="display:none" onclick="exportCSV()">⬇ Export CSV</button>
+  </div>
+</header>
+
+<div class="upload-section">
+  <div class="upload-zone" id="uploadZone" style="cursor:default">
+    <span class="icon">📊</span>
+    <h3>Q1 2026 CFO Dashboard Baseline</h3>
+    <p>Krungthai Bank Savings Account No. 017-0-54931-3 · Built from the classified January, February, and March 2026 statements using the GoGoCash finance taxonomy.</p>
+  </div>
+</div>
+
+<div class="alert alert-e" id="alertErr"></div>
+
+<div id="mainContent" style="display:none">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('overview',this)">Overview</button>
+    <button class="tab-btn" onclick="switchTab('monthly',this)">Monthly P&amp;L</button>
+    <button class="tab-btn" onclick="switchTab('transactions',this)">Transactions</button>
+    <button class="tab-btn" onclick="switchTab('categories',this)">Categories</button>
+  </div>
+
+  <!-- OVERVIEW -->
+  <div class="tab-panel active" id="tab-overview">
+    <div class="kpi-row" id="kpiRow"></div>
+    <div class="chart-row">
+      <div class="card">
+        <div class="card-title">Balance Trend <span class="card-badge" id="trendBadge">—</span></div>
+        <canvas id="trendChart" height="200"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-title">Monthly Cash Flow</div>
+        <canvas id="monthlyChart" height="200"></canvas>
+      </div>
+    </div>
+    <div class="insights-grid" id="insightsGrid"></div>
+    <div class="card" id="iaCard" style="margin-bottom:20px">
+      <div class="card-title">Involve Asia — Affiliate Revenue Tracker <span class="card-badge">Primary Income</span></div>
+      <div id="iaContent"></div>
+    </div>
+  </div>
+
+  <!-- MONTHLY P&L -->
+  <div class="tab-panel" id="tab-monthly">
+    <div class="month-table-wrap">
+      <table class="month-table" id="monthTable"></table>
+    </div>
+  </div>
+
+  <!-- TRANSACTIONS -->
+  <div class="tab-panel" id="tab-transactions">
+    <div class="tx-wrap">
+      <div class="tx-toolbar">
+        <div class="tx-title">Transactions</div>
+        <div class="search-box">
+          <span style="color:var(--t3);font-size:12px">🔍</span>
+          <input type="text" placeholder="Search…" id="searchInput" oninput="filterTx()">
+        </div>
+        <div class="flt-row" id="monthFilters"></div>
+        <div class="flt-row" id="typeFilters">
+          <button class="flt on" onclick="setTF('all',this)">All</button>
+          <button class="flt" onclick="setTF('in',this)">In</button>
+          <button class="flt" onclick="setTF('out',this)">Out</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr>
+            <th onclick="sortTx('date')">Date ↕</th><th>Month</th><th>Type</th>
+            <th>Code</th><th>Description</th><th>Counterparty</th><th>Category</th>
+            <th onclick="sortTx('amount')" style="text-align:right">Amount ↕</th>
+            <th style="text-align:right">Running Balance</th>
+          </tr></thead>
+          <tbody id="txBody"></tbody>
+        </table>
+      </div>
+      <div class="pagination">
+        <span id="pgInfo">—</span>
+        <div class="page-btns" id="pgBtns"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CATEGORIES -->
+  <div class="tab-panel" id="tab-categories">
+    <div class="chart-row">
+      <div class="card">
+        <div class="card-title">Expense Breakdown</div>
+        <canvas id="catChart" height="280"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-title">Top Expense Categories</div>
+        <div class="cat-list" id="catList"></div>
+      </div>
+    </div>
+    <div class="chart-row" style="margin-bottom:0">
+      <div class="card">
+        <div class="card-title">Income Sources</div>
+        <div class="cat-list" id="incList"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Key Expense Trend by Month</div>
+        <canvas id="catTrendChart" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="no-data" id="noData">
+  <span class="icon">📊</span>
+  <p>Preparing the embedded Jan–Mar 2026 finance dataset.</p>
+</div>
+</div>
+
+<script>
+const ACCOUNT_LABEL='Krungthai Bank Savings Account No. 017-0-54931-3';
+const CATEGORY_COLORS={
+  'Affiliate Revenue':'#00E5B0',
+  'International Revenue':'#4DFFB0',
+  'Internal Transfer IN':'#00C8E5',
+  'Payroll – Core Staff':'#FF4F6E',
+  'Payroll – Management':'#FF8080',
+  'Operations & Reimbursable':'#FFB347',
+  'Professional Services':'#6B6BFF',
+  'Tax & Government':'#FF8C42',
+  'Bank Fees':'#505060',
+  'Affiliate Cashback OUT':'#00A5C8',
+  'Other / Unclassified':'#384050'
+};
+const INCOME_CATEGORIES=['Affiliate Revenue','International Revenue','Internal Transfer IN'];
+const EXPENSE_CATEGORIES=['Payroll – Core Staff','Payroll – Management','Operations & Reimbursable','Professional Services','Tax & Government','Bank Fees','Affiliate Cashback OUT','Other / Unclassified'];
+const RECURRING_CATEGORIES=['Payroll – Core Staff','Payroll – Management'];
+const RAW_TX_DATA=[
+  ['January 2026', '05/01/2026', '20:20', 'PBSWT', 'TR to 9836955453 SAYRUNG JAIBUN', 'SAYRUNG JAIBUN', 29100.00, 'OUT', 'Payroll – Management', 221411.12],
+  ['January 2026', '19/01/2026', '15:08', 'NBSDT', 'TR fr 6900478654', '6900478654', 21021.89, 'IN', 'Internal Transfer IN', 242433.01],
+  ['January 2026', '28/01/2026', '07:51', 'PBSWT', 'TR to 6900478654 MR.Kunanon Jarat', 'MR.Kunanon Jarat', 6864.00, 'OUT', 'Operations & Reimbursable', 235569.01],
+  ['January 2026', '28/01/2026', '12:57', 'BSD22', 'BPS/017/04/INVOLVE ASIA (THAILAND) CO. LTD./108682 Corporate Online', 'Involve Asia (Thailand) Co. Ltd.', 42980.26, 'IN', 'Affiliate Revenue', 278549.27],
+  ['January 2026', '29/01/2026', '18:18', 'PBPSWP', '099400015844113 0323568000161 REVENUE DEPARTMENT Corporate Online', 'Revenue Department', 7365.62, 'OUT', 'Tax & Government', 271183.65],
+  ['January 2026', '29/01/2026', '18:23', 'PBSWT', 'TR to 9836955453 SAYRUNG JAIBUN', 'SAYRUNG JAIBUN', 29100.00, 'OUT', 'Payroll – Management', 242083.65],
+  ['January 2026', '30/01/2026', '01:55', 'IORSWT', 'TR to 2272052144 Nattaya Ketawalh', 'Nattaya Ketawalh', 19400.00, 'OUT', 'Payroll – Core Staff', 222683.65],
+  ['January 2026', '30/01/2026', '01:55', 'IORSFE', 'Transaction Fee', 'Krungthai Bank', 5.00, 'OUT', 'Bank Fees', 222678.65],
+  ['January 2026', '30/01/2026', '01:55', 'IORSWT', 'TR to 0932869012 Pittaya Suteerawut', 'Pittaya Suteerawut', 4818.68, 'OUT', 'Payroll – Core Staff', 217859.97],
+  ['January 2026', '30/01/2026', '01:55', 'IORSFE', 'Transaction Fee', 'Krungthai Bank', 5.00, 'OUT', 'Bank Fees', 217854.97],
+  ['January 2026', '30/01/2026', '01:56', 'IORSWT', 'TR to 1918048002 UI 3 ACCOUNT CO. LTD.', 'UI 3 Account Co. Ltd.', 4850.00, 'OUT', 'Professional Services', 213004.97],
+  ['January 2026', '30/01/2026', '01:56', 'IORSFE', 'Transaction Fee', 'Krungthai Bank', 5.00, 'OUT', 'Bank Fees', 212999.97],
+  ['January 2026', '30/01/2026', '13:46', 'PBSWT', 'TR to 6900478654 MR.Kunanon Jarat', 'MR.Kunanon Jarat', 1555.52, 'OUT', 'Operations & Reimbursable', 211444.45],
+  ['January 2026', '30/01/2026', '13:47', 'PBSWT', 'TR to 6900478654 MR.Kunanon Jarat', 'MR.Kunanon Jarat', 950.16, 'OUT', 'Operations & Reimbursable', 210494.29],
+  ['January 2026', '30/01/2026', '14:36', 'PBSWT', 'TR to 6900478654 MR.Kunanon Jarat', 'MR.Kunanon Jarat', 279.99, 'OUT', 'Operations & Reimbursable', 210214.30],
+  ['January 2026', '30/01/2026', '15:09', 'PBSWT', 'TR to 6900478654 MR.Kunanon Jarat', 'MR.Kunanon Jarat', 31.10, 'OUT', 'Operations & Reimbursable', 210183.20],
+  ['January 2026', '30/01/2026', '18:39', 'XISDT', 'IWRM:111.6100USD:Alibaba.com Singapore E', 'Alibaba.com Singapore', 3446.74, 'IN', 'International Revenue', 213629.94],
+  ['February 2026', '01/02/2026', '14:59', 'PBSWT', 'TR to 6900478654 MR.Kunanon Jarat', 'MR.Kunanon Jarat', 3629.54, 'OUT', 'Operations & Reimbursable', 210000.40],
+  ['February 2026', '02/02/2026', '12:56', 'BSD22', 'BPS/017/04/INVOLVE ASIA (THAILAND) CO. LTD./108682 Corporate Online', 'Involve Asia (Thailand) Co. Ltd.', 53150.26, 'IN', 'Affiliate Revenue', 263150.66],
+  ['February 2026', '03/02/2026', '20:56', 'IORSWT', 'TR to 2470879582 Uthumporn Khaoleuang', 'Uthumporn Khaoleuang', 484.61, 'OUT', 'Affiliate Cashback OUT', 262666.05],
+  ['February 2026', '03/02/2026', '20:56', 'IORSFE', 'Transaction Fee', 'Krungthai Bank', 5.00, 'OUT', 'Bank Fees', 262661.05],
+  ['February 2026', '07/02/2026', '01:51', 'IORSWT', 'TR to 0072403569 Sirichai Wongsanitivanich', 'Sirichai Wongsanitivanich', 176.85, 'OUT', 'Affiliate Cashback OUT', 262484.20],
+  ['February 2026', '07/02/2026', '01:51', 'IORSFE', 'Transaction Fee', 'Krungthai Bank', 5.00, 'OUT', 'Bank Fees', 262479.20],
+  ['February 2026', '10/02/2026', '21:27', 'PBSWT', 'TR to 6900478654 MR.Kunanon Jarat', 'MR.Kunanon Jarat', 2137.14, 'OUT', 'Operations & Reimbursable', 260342.06],
+  ['February 2026', '11/02/2026', '14:56', 'PBPSWP', '099400015844113 0323568000161 REVENUE DEPARTMENT Corporate Online', 'Revenue Department', 3281.77, 'OUT', 'Tax & Government', 257060.29],
+  ['February 2026', '11/02/2026', '19:05', 'IORSWT', 'TR to 7512480493 As one audit company limited', 'As One Audit Co. Ltd.', 10000.00, 'OUT', 'Professional Services', 247060.29],
+  ['February 2026', '11/02/2026', '19:05', 'IORSFE', 'Transaction Fee', 'Krungthai Bank', 5.00, 'OUT', 'Bank Fees', 247055.29],
+  ['February 2026', '11/02/2026', '19:07', 'IORSWT', 'TR to 1918048002 Ui 3 account Co. Ltd.', 'UI 3 Account Co. Ltd.', 14000.00, 'OUT', 'Professional Services', 233055.29],
+  ['February 2026', '11/02/2026', '19:07', 'IORSFE', 'Transaction Fee', 'Krungthai Bank', 5.00, 'OUT', 'Bank Fees', 233050.29],
+  ['February 2026', '11/02/2026', '19:51', 'IORSDT', '004-1918048002', '004-1918048002', 120.00, 'IN', 'Internal Transfer IN', 233170.29],
+  ['February 2026', '12/02/2026', '10:28', 'IORSDT', '004-7512480493', '004-7512480493', 300.00, 'IN', 'Internal Transfer IN', 233470.29],
+  ['February 2026', '16/02/2026', '10:49', 'PBSWT', 'TR to 6900478654 MR.Kunanon Jarat', 'MR.Kunanon Jarat', 1417.30, 'OUT', 'Operations & Reimbursable', 232052.99],
+  ['February 2026', '17/02/2026', '15:35', 'IORSWT', 'TR to 0328395193 Warot Sonrabeab', 'Warot Sonrabeab', 120.44, 'OUT', 'Affiliate Cashback OUT', 231932.55],
+  ['February 2026', '17/02/2026', '15:35', 'IORSFE', 'Transaction Fee', 'Krungthai Bank', 5.00, 'OUT', 'Bank Fees', 231927.55],
+  ['February 2026', '22/02/2026', '20:10', 'PBSWT', 'TR to 6900478654 MR.Kunanon Jarat', 'MR.Kunanon Jarat', 775.75, 'OUT', 'Operations & Reimbursable', 231151.80],
+  ['February 2026', '24/02/2026', '12:56', 'BSD22', 'BPS/017/04/INVOLVE ASIA (THAILAND) CO. LTD./108682 Corporate Online', 'Involve Asia (Thailand) Co. Ltd.', 16641.20, 'IN', 'Affiliate Revenue', 247793.00],
+  ['February 2026', '27/02/2026', '02:00', 'PBSWT', 'TR to 9836955453 SAYRUNG JAIBUN', 'SAYRUNG JAIBUN', 29100.00, 'OUT', 'Payroll – Management', 218693.00],
+  ['February 2026', '27/02/2026', '02:00', 'IORSWT', 'TR to 0932869012 Mr. Pittaya Suthirawut', 'Pittaya Suteerawut', 13580.00, 'OUT', 'Payroll – Core Staff', 205113.00],
+  ['February 2026', '27/02/2026', '02:00', 'IORSFE', 'Transaction Fee', 'Krungthai Bank', 5.00, 'OUT', 'Bank Fees', 205108.00],
+  ['February 2026', '27/02/2026', '02:00', 'IORSWT', 'TR to 1158152254 Phatsara Tiathawornchai', 'Phatsara Tiathawornchai', 9700.00, 'OUT', 'Payroll – Core Staff', 195408.00],
+  ['February 2026', '27/02/2026', '02:00', 'IORSFE', 'Transaction Fee', 'Krungthai Bank', 5.00, 'OUT', 'Bank Fees', 195403.00],
+  ['February 2026', '27/02/2026', '02:00', 'IORSWT', 'TR to 2272052144 Nattaya Ketawalh', 'Nattaya Ketawalh', 19400.00, 'OUT', 'Payroll – Core Staff', 176003.00],
+  ['February 2026', '27/02/2026', '02:00', 'IORSFE', 'Transaction Fee', 'Krungthai Bank', 5.00, 'OUT', 'Bank Fees', 175998.00],
+  ['March 2026', '03/03/2026', '10:27', 'PBSWT', 'TR to 6900478654 MR.Kunanon Jarat', 'MR.Kunanon Jarat', 5266.40, 'OUT', 'Operations & Reimbursable', 170731.60],
+  ['March 2026', '09/03/2026', '12:48', 'BSD22', 'BPS/017/04/INVOLVE ASIA (THAILAND) CO. LTD./108682 Corporate Online', 'Involve Asia (Thailand) Co. Ltd.', 15135.69, 'IN', 'Affiliate Revenue', 185867.29],
+  ['March 2026', '09/03/2026', '14:45', 'IORSWT', 'TR to 1052165253 Chataya Thanesphatisuk', 'Chataya Thanesphatisuk', 81.81, 'OUT', 'Affiliate Cashback OUT', 185785.48],
+  ['March 2026', '09/03/2026', '14:45', 'IORSFE', 'Transaction Fee', 'Krungthai Bank', 5.00, 'OUT', 'Bank Fees', 185780.48],
+  ['March 2026', '09/03/2026', '17:26', 'XISDT', 'IWRM:91.7100USD:Alibaba.com Singapore E-', 'Alibaba.com Singapore', 2879.22, 'IN', 'International Revenue', 188659.70],
+  ['March 2026', '10/03/2026', '16:28', 'IORSWT', 'TR to 6290289500 PIYAPAN KANTAKART', 'PIYAPAN KANTAKART', 219.86, 'OUT', 'Affiliate Cashback OUT', 188439.84],
+  ['March 2026', '10/03/2026', '16:28', 'IORSFE', 'Transaction Fee', 'Krungthai Bank', 5.00, 'OUT', 'Bank Fees', 188434.84],
+  ['March 2026', '11/03/2026', '22:02', 'PBSWT', 'TR to 9836955453 SAYRUNG JAIBUN', 'SAYRUNG JAIBUN', 5335.00, 'OUT', 'Payroll – Management', 183099.84],
+  ['March 2026', '12/03/2026', '20:08', 'PBSWT', 'TR to 9836955453 SAYRUNG JAIBUN', 'SAYRUNG JAIBUN', 9700.00, 'OUT', 'Payroll – Management', 173399.84],
+  ['March 2026', '14/03/2026', '18:27', 'PBSWT', 'TR to 6900478654 MR.Kunanon Jarat', 'MR.Kunanon Jarat', 5350.00, 'OUT', 'Operations & Reimbursable', 168049.84],
+  ['March 2026', '17/03/2026', '17:47', 'NMPSWP', '099400015844114-0323568000161', 'Revenue Department', 830.80, 'OUT', 'Tax & Government', 167219.04],
+  ['March 2026', '17/03/2026', '18:01', 'NMPSWP', '099400015844114-0323568000161', 'Revenue Department', 2353.30, 'OUT', 'Tax & Government', 164865.74],
+  ['March 2026', '17/03/2026', '20:31', 'PBSWT', 'TR to 6900478654 MR.Kunanon Jarat', 'MR.Kunanon Jarat', 1369.60, 'OUT', 'Operations & Reimbursable', 163496.14],
+  ['March 2026', '17/03/2026', '20:35', 'PBSWT', 'TR to 6900478654 MR.Kunanon Jarat', 'MR.Kunanon Jarat', 4942.99, 'OUT', 'Operations & Reimbursable', 158553.15],
+  ['March 2026', '20/03/2026', '12:52', 'PBSWT', 'TR to 6900478654 MR.Kunanon Jarat', 'MR.Kunanon Jarat', 9900.00, 'OUT', 'Operations & Reimbursable', 148653.15],
+  ['March 2026', '20/03/2026', '19:15', 'IORSWT', 'TR to 054570537339 Apichat Phonrom', 'Apichat Phonrom', 241.20, 'OUT', 'Affiliate Cashback OUT', 148411.95],
+  ['March 2026', '20/03/2026', '19:15', 'IORSFE', 'Transaction Fee', 'Krungthai Bank', 5.00, 'OUT', 'Bank Fees', 148406.95],
+  ['March 2026', '20/03/2026', '20:06', 'IORSWT', 'TR to 4671108377 Sumet Amornhiransiri', 'Sumet Amornhiransiri', 423.83, 'OUT', 'Affiliate Cashback OUT', 147983.12],
+  ['March 2026', '20/03/2026', '20:06', 'IORSFE', 'Transaction Fee', 'Krungthai Bank', 5.00, 'OUT', 'Bank Fees', 147978.12],
+  ['March 2026', '26/03/2026', '08:02', 'PBSWT', 'TR to 9321339019 Charuwat Tantitechanan', 'Charuwat Tantitechanan', 2002.91, 'OUT', 'Affiliate Cashback OUT', 145975.21],
+  ['March 2026', '26/03/2026', '08:04', 'IORSWT', 'TR to 5812253176 Sarash Haruencheep', 'Sarash Haruencheep', 678.84, 'OUT', 'Affiliate Cashback OUT', 145296.37],
+  ['March 2026', '26/03/2026', '08:04', 'IORSFE', 'Transaction Fee', 'Krungthai Bank', 5.00, 'OUT', 'Bank Fees', 145291.37],
+  ['March 2026', '27/03/2026', '13:03', 'BSD22', 'BPS/017/04/INVOLVE ASIA (THAILAND) CO. LTD./108682 Corporate Online', 'Involve Asia (Thailand) Co. Ltd.', 19661.98, 'IN', 'Affiliate Revenue', 164953.35],
+  ['March 2026', '28/03/2026', '12:39', 'IORSWT', 'TR to 0188928358 THAMMANIT THONGLOR', 'THAMMANIT THONGLOR', 704.01, 'OUT', 'Affiliate Cashback OUT', 164249.34],
+  ['March 2026', '28/03/2026', '12:39', 'IORSFE', 'Transaction Fee', 'Krungthai Bank', 5.00, 'OUT', 'Bank Fees', 164244.34],
+  ['March 2026', '31/03/2026', '08:28', 'PBSWT', 'TR to 1830825453 Nattaya Ketawalh', 'Nattaya Ketawalh', 19400.00, 'OUT', 'Payroll – Core Staff', 144844.34],
+  ['March 2026', '31/03/2026', '08:35', 'PBSWT', 'TR to 3290351653 MISSPhatsara Tiathawornchai', 'Phatsara Tiathawornchai', 9700.00, 'OUT', 'Payroll – Core Staff', 135144.34],
+  ['March 2026', '31/03/2026', '13:41', 'PBSWT', 'TR to 6656929230 Pittaya Suteerawut', 'Pittaya Suteerawut', 13580.00, 'OUT', 'Payroll – Core Staff', 121564.34],
+];
+const TX_DATA=RAW_TX_DATA.map((row,index)=>({
+  id:`tx_${index+1}`,
+  month:row[0],
+  date:row[1],
+  time:row[2],
+  code:row[3],
+  description:row[4],
+  counterparty:row[5],
+  amount:Number(row[6]),
+  direction:row[7],
+  category:row[8],
+  balance:Number(row[9])
+}));
+
+const state={
+  months:[],
+  monthMap:{},
+  allTx:[],
+  filteredTx:[],
+  txTypeFilter:'all',
+  txMonthFilter:'all',
+  search:'',
+  sortKey:'date',
+  sortDir:1,
+  page:1
+};
+const PAGE_SIZE=15;
+
+function parseDateValue(dateStr,timeStr='00:00'){
+  const [day,month,year]=dateStr.split('/').map(Number);
+  const [hour,minute]=timeStr.split(':').map(Number);
+  return new Date(year,month-1,day,hour||0,minute||0,0,0);
+}
+
+function monthSortValue(label){
+  const [monthName,year]=label.split(' ');
+  return new Date(`${monthName} 1, ${year}`).getTime();
+}
+
+function totalFor(month,category){
+  return month.categoryTotals[category]||0;
+}
+
+function movement(tx){
+  return tx.direction==='IN'?tx.amount:-tx.amount;
+}
+
+function fmt(value){
+  if(value==null||Number.isNaN(Number(value)))return '—';
+  return '฿'+Number(value).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+function fmtSigned(value){
+  return `${value>=0?'+':'-'}${fmt(Math.abs(value))}`;
+}
+
+function fmtCompact(value){
+  if(value>=1e6)return `${(value/1e6).toFixed(1)}M`;
+  if(value>=1e3)return `${(value/1e3).toFixed(0)}K`;
+  return Number(value).toFixed(0);
+}
+
+function pct(value,digits=2){
+  if(value==null||Number.isNaN(Number(value)))return '—';
+  return `${(value*100).toFixed(digits)}%`;
+}
+
+function pctChange(current,previous){
+  if(previous==null||previous===0)return null;
+  return (current-previous)/previous;
+}
+
+function trendLabel(current,previous,digits=1){
+  const change=pctChange(current,previous);
+  if(change==null)return '';
+  return `${change>=0?'↑':'↓'}${Math.abs(change*100).toFixed(digits)}% vs prev`;
+}
+
+function esc(value){
+  return String(value||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function shortMonth(label){
+  return label.split(' ')[0].slice(0,3);
+}
+
+function showErr(message){
+  const alert=document.getElementById('alertErr');
+  alert.textContent=`⚠ ${message}`;
+  alert.classList.add('on');
+}
+
+function buildState(){
+  const monthMap={};
+  state.allTx=TX_DATA.map(tx=>({
+    ...tx,
+    ts:parseDateValue(tx.date,tx.time).getTime()
+  })).sort((a,b)=>a.ts-b.ts);
+
+  state.allTx.forEach(tx=>{
+    if(!monthMap[tx.month]){
+      monthMap[tx.month]={
+        label:tx.month,
+        sortValue:monthSortValue(tx.month),
+        transactions:[],
+        categoryTotals:{},
+        categoryCounts:{},
+        totalRevenue:0,
+        totalExpenses:0
+      };
+    }
+    const month=monthMap[tx.month];
+    month.transactions.push(tx);
+    month.categoryTotals[tx.category]=(month.categoryTotals[tx.category]||0)+tx.amount;
+    month.categoryCounts[tx.category]=(month.categoryCounts[tx.category]||0)+1;
+    if(tx.direction==='IN')month.totalRevenue+=tx.amount;
+    else month.totalExpenses+=tx.amount;
+  });
+
+  state.months=Object.values(monthMap).sort((a,b)=>a.sortValue-b.sortValue).map(month=>{
+    month.transactions.sort((a,b)=>a.ts-b.ts);
+    const first=month.transactions[0];
+    const last=month.transactions[month.transactions.length-1];
+    month.beginningBalance=first.balance-movement(first);
+    month.endingBalance=last.balance;
+    month.netCashFlow=month.totalRevenue-month.totalExpenses;
+    month.affiliateRevenue=totalFor(month,'Affiliate Revenue');
+    month.internationalRevenue=totalFor(month,'International Revenue');
+    month.internalTransferIn=totalFor(month,'Internal Transfer IN');
+    month.payrollCore=totalFor(month,'Payroll – Core Staff');
+    month.payrollManagement=totalFor(month,'Payroll – Management');
+    month.totalPayroll=month.payrollCore+month.payrollManagement;
+    month.operationsSpend=totalFor(month,'Operations & Reimbursable');
+    month.professionalServices=totalFor(month,'Professional Services');
+    month.taxPaid=totalFor(month,'Tax & Government');
+    month.bankFees=totalFor(month,'Bank Fees');
+    month.cashback=totalFor(month,'Affiliate Cashback OUT');
+    month.otherOut=totalFor(month,'Other / Unclassified');
+    month.recurringExpenses=RECURRING_CATEGORIES.reduce((sum,category)=>sum+totalFor(month,category),0);
+    month.variableExpenses=month.totalExpenses-month.recurringExpenses;
+    month.concentrationShare=month.totalRevenue?month.affiliateRevenue/month.totalRevenue:0;
+    month.payrollRatio=month.totalRevenue?month.totalPayroll/month.totalRevenue:0;
+    month.burnRate=Math.max(0,-month.netCashFlow);
+    month.taxPayments=month.transactions.filter(tx=>tx.category==='Tax & Government');
+    return month;
+  });
+
+  state.monthMap=Object.fromEntries(state.months.map(month=>[month.label,month]));
+  state.filteredTx=[...state.allTx];
+}
+
+function getQuarterMetrics(){
+  const latest=state.months[state.months.length-1];
+  const previous=state.months[state.months.length-2]||null;
+  const totalRevenue=state.months.reduce((sum,month)=>sum+month.totalRevenue,0);
+  const totalExpenses=state.months.reduce((sum,month)=>sum+month.totalExpenses,0);
+  const totalPayroll=state.months.reduce((sum,month)=>sum+month.totalPayroll,0);
+  const totalTax=state.months.reduce((sum,month)=>sum+month.taxPaid,0);
+  const totalBankFees=state.months.reduce((sum,month)=>sum+month.bankFees,0);
+  const affiliateRevenue=state.months.reduce((sum,month)=>sum+month.affiliateRevenue,0);
+  const netCashFlow=totalRevenue-totalExpenses;
+  const avgBurn=state.months.length?state.months.reduce((sum,month)=>sum+month.burnRate,0)/state.months.length:0;
+  const runway=avgBurn?latest.endingBalance/avgBurn:0;
+  const fundraiseAlert=avgBurn*3;
+  const liquidityFloor=avgBurn*6;
+  const concentrationShare=totalRevenue?affiliateRevenue/totalRevenue:0;
+  const worstPayrollMonth=state.months.reduce((worst,month)=>!worst||month.payrollRatio>worst.payrollRatio?month:worst,null);
+  const highestBurnMonth=state.months.reduce((worst,month)=>!worst||month.burnRate>worst.burnRate?month:worst,null);
+  const concentrationBreaches=state.months.filter(month=>month.concentrationShare>0.7);
+  const negativeMonths=state.months.filter(month=>month.netCashFlow<0);
+  return{
+    latest,
+    previous,
+    totalRevenue,
+    totalExpenses,
+    totalPayroll,
+    totalTax,
+    totalBankFees,
+    affiliateRevenue,
+    netCashFlow,
+    avgBurn,
+    runway,
+    fundraiseAlert,
+    liquidityFloor,
+    concentrationShare,
+    worstPayrollMonth,
+    highestBurnMonth,
+    concentrationBreaches,
+    negativeMonths
+  };
+}
+
+function renderProjectSummary(){
+  const metrics=getQuarterMetrics();
+  const zone=document.getElementById('uploadZone');
+  zone.innerHTML=`
+    <span class="icon">📊</span>
+    <h3>GoGoCash Q1 2026 dashboard is live</h3>
+    <p>${ACCOUNT_LABEL} · ${state.allTx.length} classified transactions · ${state.months.map(month=>shortMonth(month.label)).join(' • ')} 2026 statement coverage</p>
+    <div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:12px">
+      <span class="month-pill">Current Cash ${fmt(metrics.latest.endingBalance)}</span>
+      <span class="month-pill">Avg Burn ${fmt(metrics.avgBurn)}/mo</span>
+      <span class="month-pill">Runway ${metrics.runway.toFixed(2)} mo</span>
+    </div>
+  `;
+}
+
+function updatePills(){
+  document.getElementById('monthPills').innerHTML=state.months.map(month=>`<span class="month-pill">${month.label}</span>`).join('');
+}
+
+function renderKPIs(){
+  const metrics=getQuarterMetrics();
+  const currentBalanceDelta=trendLabel(metrics.latest.endingBalance,metrics.previous?metrics.previous.endingBalance:state.months[0].beginningBalance,1);
+  const revenueDelta=trendLabel(metrics.latest.totalRevenue,metrics.previous?metrics.previous.totalRevenue:null,1);
+  const expenseDelta=trendLabel(metrics.latest.totalExpenses,metrics.previous?metrics.previous.totalExpenses:null,1);
+  const netDelta=trendLabel(metrics.latest.netCashFlow,metrics.previous?metrics.previous.netCashFlow:null,1);
+  const runwayClass=metrics.runway<3?'cr':metrics.runway<5?'cy':'cg';
+  const runwayValueClass=metrics.runway<3?'neg':metrics.runway<5?'warn':'pos';
+  const kpis=[
+    {label:'Current Balance',value:fmt(metrics.latest.endingBalance),card:'cg',valueClass:metrics.latest.endingBalance<metrics.fundraiseAlert?'warn':'pos',sub:`${metrics.latest.label} close · alert floor ${fmt(metrics.fundraiseAlert)}`,delta:currentBalanceDelta,deltaClass:metrics.previous&&metrics.latest.endingBalance>=metrics.previous.endingBalance?'up':'dn'},
+    {label:'Total Revenue',value:fmt(metrics.totalRevenue),card:'cg',valueClass:'pos',sub:'Q1 2026 inflows',delta:revenueDelta,deltaClass:metrics.previous&&metrics.latest.totalRevenue>=metrics.previous.totalRevenue?'up':'dn'},
+    {label:'Total Expenses',value:fmt(metrics.totalExpenses),card:'cr',valueClass:'neg',sub:'Q1 2026 outflows',delta:expenseDelta,deltaClass:metrics.previous&&metrics.latest.totalExpenses<=metrics.previous.totalExpenses?'up':'dn'},
+    {label:'Net Cash Flow',value:fmtSigned(metrics.netCashFlow),card:metrics.netCashFlow>=0?'cg':'cr',valueClass:metrics.netCashFlow>=0?'pos':'neg',sub:'Quarter-to-date cash movement',delta:netDelta,deltaClass:metrics.previous&&metrics.latest.netCashFlow>=metrics.previous.netCashFlow?'up':'dn'},
+    {label:'Cash Runway',value:`${metrics.runway.toFixed(2)} mo`,card:runwayClass,valueClass:runwayValueClass,sub:`Avg burn ${fmt(metrics.avgBurn)} / month`,delta:null}
+  ];
+  document.getElementById('kpiRow').innerHTML=kpis.map((kpi,index)=>`
+    <div class="kpi ${kpi.card}" style="animation:fadeUp .35s ${index*0.05}s ease both">
+      <div class="kpi-label"><span class="kpi-dot"></span>${kpi.label}</div>
+      <div class="kpi-val ${kpi.valueClass}">${kpi.value}</div>
+      <div class="kpi-sub">${kpi.sub}</div>
+      ${kpi.delta?`<div class="kpi-delta ${kpi.deltaClass}">${kpi.delta}</div>`:''}
+    </div>
+  `).join('');
+}
+
+function renderInsights(){
+  const metrics=getQuarterMetrics();
+  const latest=metrics.latest;
+  const worstPayroll=metrics.worstPayrollMonth;
+  const concentrationMonths=metrics.concentrationBreaches.map(month=>shortMonth(month.label)).join(', ');
+  const latestVariableShare=latest.totalExpenses?latest.variableExpenses/latest.totalExpenses:0;
+  const cards=[
+    {
+      tone:metrics.runway<3?'danger':'warn',
+      icon:metrics.runway<3?'🚨':'⚠️',
+      title:'Cash runway alert',
+      body:`Average burn is ${fmt(metrics.avgBurn)} per month. March closing cash of ${fmt(latest.endingBalance)} is ${latest.endingBalance<metrics.fundraiseAlert?'below':'above'} the 3-month fundraise trigger of ${fmt(metrics.fundraiseAlert)}.`
+    },
+    {
+      tone:metrics.concentrationShare>0.7?'warn':'ok',
+      icon:'🔗',
+      title:'Revenue concentration risk',
+      body:`Involve Asia generated ${pct(metrics.concentrationShare)} of Q1 revenue. Monthly concentration breached the 70% threshold in ${concentrationMonths||'no months'}.`
+    },
+    {
+      tone:worstPayroll&&worstPayroll.payrollRatio>0.6?'danger':'ok',
+      icon:'👥',
+      title:'Payroll-to-revenue pressure',
+      body:`Payroll exceeded the 60% limit in every reviewed month. The highest ratio was ${pct(worstPayroll.payrollRatio)} in ${worstPayroll.label}.`
+    },
+    {
+      tone:metrics.negativeMonths.length===state.months.length?'danger':'warn',
+      icon:'📉',
+      title:'Negative cash flow trend',
+      body:`Net cash flow was negative in ${metrics.negativeMonths.length} of ${state.months.length} months. ${metrics.highestBurnMonth.label} posted the steepest burn at ${fmt(metrics.highestBurnMonth.burnRate)}.`
+    },
+    {
+      tone:state.months.every(month=>month.taxPaid>0)?'ok':'warn',
+      icon:'🏛️',
+      title:'Tax compliance tracker',
+      body:`Revenue Department payments were recorded in all three months for a total of ${fmt(metrics.totalTax)}. March included ${latest.taxPayments.length} separate tax remittances.`
+    },
+    {
+      tone:latestVariableShare>0.35?'info':'ok',
+      icon:'🧾',
+      title:'Recurring vs variable spend',
+      body:`Recurring payroll represented ${pct(latest.recurringExpenses/latest.totalExpenses)} of March outflows. Variable spend was led by ${fmt(latest.operationsSpend)} of reimbursements and ${fmt(latest.cashback)} of cashback payouts.`
+    }
+  ];
+  document.getElementById('insightsGrid').innerHTML=cards.map(card=>`
+    <div class="insight ${card.tone}">
+      <div class="insight-icon">${card.icon}</div>
+      <div>
+        <div class="insight-title">${card.title}</div>
+        <div class="insight-body">${card.body}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderIA(){
+  const metrics=getQuarterMetrics();
+  const title=document.querySelector('#iaCard .card-title');
+  title.innerHTML=`Revenue Concentration & CFO Actions <span class="card-badge">${pct(metrics.concentrationShare)} of Q1 revenue</span>`;
+
+  const monthlyCards=state.months.map(month=>{
+    const share=month.totalRevenue?month.affiliateRevenue/month.totalRevenue:0;
+    const previous=state.months[state.months.indexOf(month)-1];
+    const delta=previous?trendLabel(month.affiliateRevenue,previous.affiliateRevenue,0):'';
+    return `
+      <div style="background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--r8);padding:14px">
+        <div style="font-size:9px;color:var(--t2);font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">${month.label}</div>
+        <div style="font-family:var(--mono);font-size:17px;font-weight:700;color:var(--g)">${fmt(month.affiliateRevenue)}</div>
+        <div style="font-size:10px;color:${share>0.7?'var(--y)':'var(--t2)'};margin-top:4px">${pct(share)} of month revenue</div>
+        ${delta?`<div style="font-size:10px;color:${month.affiliateRevenue>previous.affiliateRevenue?'var(--g)':'var(--r)'};margin-top:5px">${delta}</div>`:''}
+      </div>
+    `;
+  }).join('');
+
+  const actions=[
+    'Protect cash now by treating ฿128,946.78 as the minimum 3-month alert floor and beginning funding conversations before Q2 burn breaches it.',
+    'Diversify revenue beyond Involve Asia because concentration reached 99.40% in February and 92.36% in March.',
+    'Put MR.Kunanon reimbursements and affiliate cashback under a documented monthly cap to slow variable cash leakage.'
+  ];
+
+  document.getElementById('iaContent').innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:14px">
+      ${monthlyCards}
+    </div>
+    <div style="font-size:11px;color:var(--t2);margin-bottom:14px">
+      Involve Asia delivered <strong style="color:var(--g);font-family:var(--mono)">${fmt(metrics.affiliateRevenue)}</strong> of Q1 revenue, while international revenue contributed <strong style="color:#4DFFB0;font-family:var(--mono)">${fmt(state.months.reduce((sum,month)=>sum+month.internationalRevenue,0))}</strong>.
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">
+      ${actions.map((action,index)=>`
+        <div style="background:var(--bg-card2);border:1px solid var(--border);border-radius:var(--r8);padding:12px 14px">
+          <div style="font-size:10px;color:var(--g);font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">Action ${index+1}</div>
+          <div style="font-size:11px;color:var(--t2);line-height:1.5">${action}</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function computeTrendText(values,mode){
+  const numeric=values.filter(value=>value!=null);
+  if(numeric.length<2)return '—';
+  const first=numeric[0];
+  const last=numeric[numeric.length-1];
+  if(first===0&&last===0)return '—';
+  const diff=last-first;
+  const pctDiff=first===0?0:Math.abs(diff/first);
+  if(pctDiff<0.01)return '⚠️ Flat';
+  const improved=mode==='down'?last<first:last>first;
+  return improved?'🟢 Improving':'🔴 Deteriorating';
+}
+
+function renderMonthlyTable(){
+  const rows=[
+    {section:'Balances'},
+    {label:'Opening Balance',values:month=>month.beginningBalance,type:'money',tone:'pos',trend:'up'},
+    {label:'Closing Balance',values:month=>month.endingBalance,type:'money',tone:'pos',trend:'up',total:true},
+    {section:'Revenue'},
+    {label:'Total Revenue',values:month=>month.totalRevenue,type:'money',tone:'pos',trend:'up',total:true},
+    {label:'Affiliate Revenue',values:month=>month.affiliateRevenue,type:'money',tone:'pos',trend:'up'},
+    {label:'International Revenue',values:month=>month.internationalRevenue,type:'money',tone:'pos',trend:'up'},
+    {label:'Internal Transfer IN',values:month=>month.internalTransferIn,type:'money',tone:'pos',trend:'up'},
+    {section:'Operating Expenses'},
+    {label:'Total Expenses',values:month=>month.totalExpenses,type:'money',tone:'neg',trend:'down',total:true},
+    {label:'Payroll – Core Staff',values:month=>month.payrollCore,type:'money',tone:'neg',trend:'down'},
+    {label:'Payroll – Management',values:month=>month.payrollManagement,type:'money',tone:'neg',trend:'down'},
+    {label:'Operations & Reimbursable',values:month=>month.operationsSpend,type:'money',tone:'neg',trend:'down'},
+    {label:'Professional Services',values:month=>month.professionalServices,type:'money',tone:'neg',trend:'down'},
+    {label:'Tax & Government',values:month=>month.taxPaid,type:'money',tone:'neg',trend:'down'},
+    {label:'Bank Fees',values:month=>month.bankFees,type:'money',tone:'neg',trend:'down'},
+    {label:'Affiliate Cashback OUT',values:month=>month.cashback,type:'money',tone:'neg',trend:'down'},
+    {label:'Other / Unclassified',values:month=>month.otherOut,type:'money',tone:'neg',trend:'down'},
+    {section:'Cash Health'},
+    {label:'Net Cash Flow',values:month=>month.netCashFlow,type:'signed',trend:'up',total:true},
+    {label:'Burn Rate',values:month=>month.burnRate,type:'money',tone:'neg',trend:'down'},
+    {label:'Payroll / Revenue',values:month=>month.payrollRatio,type:'pct',trend:'down'},
+    {label:'Affiliate Share of Revenue',values:month=>month.concentrationShare,type:'pct',trend:'down'}
+  ];
+
+  const formatValue=(row,month)=>{
+    const value=row.values(month);
+    if(row.type==='signed')return `<span class="${value>=0?'pos':'neg'}">${fmtSigned(value)}</span>`;
+    if(row.type==='pct'){
+      const warning=(row.label==='Payroll / Revenue'&&value>0.6)||(row.label==='Affiliate Share of Revenue'&&value>0.7);
+      return `<span class="${warning?'warn-c':'pos'}">${pct(value)}</span>`;
+    }
+    if(value===0)return `<span style="color:var(--t3)">—</span>`;
+    const tone=row.tone==='neg'?'neg':'pos';
+    return `<span class="${tone}">${fmt(value)}</span>`;
+  };
+
+  let html=`<thead><tr><th>Metric</th>${state.months.map(month=>`<th>${month.label}</th>`).join('')}<th>Trend</th></tr></thead><tbody>`;
+  rows.forEach(row=>{
+    if(row.section){
+      html+=`<tr class="sec-hdr"><td colspan="${state.months.length+2}">${row.section}</td></tr>`;
+      return;
+    }
+    const values=state.months.map(month=>row.values(month));
+    html+=`<tr${row.total?' class="tot"':''}><td>${row.label}</td>${state.months.map(month=>`<td>${formatValue(row,month)}</td>`).join('')}<td>${computeTrendText(values,row.trend)}</td></tr>`;
+  });
+  html+='</tbody>';
+  document.getElementById('monthTable').innerHTML=html;
+}
+
+function renderTxFilters(){
+  document.getElementById('monthFilters').innerHTML=`<button class="flt on" onclick="setMF('all',this)">All</button>`+
+    state.months.map(month=>`<button class="flt" onclick="setMF('${month.label}',this)">${shortMonth(month.label)}</button>`).join('');
+}
+
+function setTF(filter,button){
+  state.txTypeFilter=filter;
+  document.querySelectorAll('#typeFilters .flt').forEach(item=>item.classList.remove('on','rn'));
+  button.classList.add('on');
+  if(filter==='out')button.classList.add('rn');
+  filterTx();
+}
+
+function setMF(filter,button){
+  state.txMonthFilter=filter;
+  document.querySelectorAll('#monthFilters .flt').forEach(item=>item.classList.remove('on'));
+  button.classList.add('on');
+  filterTx();
+}
+
+function sortTx(key){
+  if(state.sortKey===key)state.sortDir*=-1;
+  else{
+    state.sortKey=key;
+    state.sortDir=1;
+  }
+  filterTx();
+}
+
+function applySort(rows){
+  rows.sort((left,right)=>{
+    let leftValue;
+    let rightValue;
+    if(state.sortKey==='amount'){
+      leftValue=left.amount;
+      rightValue=right.amount;
+    }else{
+      leftValue=left.ts;
+      rightValue=right.ts;
+    }
+    if(leftValue===rightValue)return 0;
+    return leftValue>rightValue?state.sortDir:-state.sortDir;
+  });
+}
+
+function filterTx(){
+  state.search=document.getElementById('searchInput').value.trim().toLowerCase();
+  state.filteredTx=state.allTx.filter(tx=>{
+    const monthMatch=state.txMonthFilter==='all'||tx.month===state.txMonthFilter;
+    const typeMatch=state.txTypeFilter==='all'||tx.direction.toLowerCase()===state.txTypeFilter;
+    const searchMatch=!state.search||[
+      tx.date,
+      tx.time,
+      tx.code,
+      tx.description,
+      tx.counterparty,
+      tx.category,
+      tx.month
+    ].join(' ').toLowerCase().includes(state.search);
+    return monthMatch&&typeMatch&&searchMatch;
+  });
+  applySort(state.filteredTx);
+  state.page=1;
+  renderTxRows();
+}
+
+function renderTxRows(){
+  const start=(state.page-1)*PAGE_SIZE;
+  const end=start+PAGE_SIZE;
+  const rows=state.filteredTx.slice(start,end);
+  const categoryBadge=category=>{
+    const color=CATEGORY_COLORS[category]||'#555';
+    return `<span class="td-cat" style="background:${color}20;color:${color}">${category}</span>`;
+  };
+  document.getElementById('txBody').innerHTML=rows.length?rows.map(tx=>`
+    <tr>
+      <td class="td-date">${tx.date}<br><span style="color:var(--t3);font-size:9px">${tx.time}</span></td>
+      <td><span class="td-mo">${tx.month.replace(' ','<br>')}</span></td>
+      <td>${tx.direction==='IN'?'<span class="badge-in">IN</span>':'<span class="badge-out">OUT</span>'}</td>
+      <td><span class="td-code">${tx.code}</span></td>
+      <td class="td-desc">${esc(tx.description)}</td>
+      <td class="td-desc">${esc(tx.counterparty)}</td>
+      <td>${categoryBadge(tx.category)}</td>
+      <td class="td-amt ${tx.direction==='IN'?'pos':'neg'}">${tx.direction==='IN'?'+':'-'}${fmt(tx.amount)}</td>
+      <td class="td-bal">${fmt(tx.balance)}</td>
+    </tr>
+  `).join(''):`<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--t3)">No transactions match the current filters.</td></tr>`;
+
+  const total=state.filteredTx.length;
+  const pages=Math.max(1,Math.ceil(total/PAGE_SIZE));
+  document.getElementById('pgInfo').textContent=total?`${start+1}–${Math.min(end,total)} of ${total}`:'0 transactions';
+  const buttons=document.getElementById('pgBtns');
+  buttons.innerHTML='';
+
+  const appendButton=(label,page,disabled,active)=>{
+    const button=document.createElement('button');
+    button.className=`pg${active?' on':''}`;
+    button.textContent=label;
+    button.disabled=disabled;
+    button.onclick=()=>{
+      state.page=page;
+      renderTxRows();
+    };
+    buttons.appendChild(button);
+  };
+
+  appendButton('‹',Math.max(1,state.page-1),state.page===1,false);
+  for(let page=1;page<=pages;page++){
+    if(pages>7&&page>2&&page<pages-1&&Math.abs(page-state.page)>1){
+      if(page===3||page===pages-2){
+        const ellipsis=document.createElement('span');
+        ellipsis.textContent='…';
+        ellipsis.style.cssText='color:var(--t3);padding:0 3px;font-size:11px';
+        buttons.appendChild(ellipsis);
+      }
+      continue;
+    }
+    appendButton(page,page,false,page===state.page);
+  }
+  appendButton('›',Math.min(pages,state.page+1),state.page===pages,false);
+}
+
+function renderCats(){
+  const expenseTotals={};
+  const incomeTotals={};
+  state.allTx.forEach(tx=>{
+    if(tx.direction==='IN')incomeTotals[tx.category]=(incomeTotals[tx.category]||0)+tx.amount;
+    else expenseTotals[tx.category]=(expenseTotals[tx.category]||0)+tx.amount;
+  });
+
+  const expenseEntries=Object.entries(expenseTotals).sort((left,right)=>right[1]-left[1]);
+  const incomeEntries=Object.entries(incomeTotals).sort((left,right)=>right[1]-left[1]);
+  const expenseTotal=expenseEntries.reduce((sum,[,value])=>sum+value,0)||1;
+  const incomeTotal=incomeEntries.reduce((sum,[,value])=>sum+value,0)||1;
+  const expenseMax=expenseEntries[0]?.[1]||1;
+  const incomeMax=incomeEntries[0]?.[1]||1;
+
+  const renderBars=(entries,total,max)=>entries.map(([category,amount])=>{
+    const color=CATEGORY_COLORS[category]||'#555';
+    return `
+      <div class="cat-item">
+        <div class="cat-hdr">
+          <span class="cat-name">${category}</span>
+          <span class="cat-amt" style="color:${color}">${fmt(amount)} · ${pct(amount/total,1)}</span>
+        </div>
+        <div class="cat-bg">
+          <div class="cat-fill" style="width:${(amount/max*100).toFixed(1)}%;background:${color}"></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('catList').innerHTML=renderBars(expenseEntries,expenseTotal,expenseMax);
+  document.getElementById('incList').innerHTML=renderBars(incomeEntries,incomeTotal,incomeMax);
+}
+
+function setupCanvas(id,height=200){
+  const canvas=document.getElementById(id);
+  const parentWidth=canvas.parentElement?.clientWidth||0;
+  const width=Math.max(320,parentWidth>0?parentWidth-40:600);
+  const dpr=window.devicePixelRatio||1;
+  canvas.width=width*dpr;
+  canvas.height=height*dpr;
+  canvas.style.width=`${width}px`;
+  canvas.style.height=`${height}px`;
+  const ctx=canvas.getContext('2d');
+  ctx.scale(dpr,dpr);
+  return{ctx,width,height};
+}
+
+function drawRoundedRect(ctx,x,y,width,height,radius){
+  const safe=Math.min(radius,width/2,height/2);
+  ctx.beginPath();
+  ctx.moveTo(x+safe,y);
+  ctx.arcTo(x+width,y,x+width,y+height,safe);
+  ctx.arcTo(x+width,y+height,x,y+height,safe);
+  ctx.arcTo(x,y+height,x,y,safe);
+  ctx.arcTo(x,y,x+width,y,safe);
+  ctx.closePath();
+}
+
+function drawTrend(){
+  if(!state.allTx.length)return;
+  const {ctx,width,height}=setupCanvas('trendChart',210);
+  const padLeft=62;
+  const padRight=16;
+  const padTop=16;
+  const padBottom=36;
+  const chartWidth=width-padLeft-padRight;
+  const chartHeight=height-padTop-padBottom;
+  const firstMonth=state.months[0];
+  const points=[{label:'Start',value:firstMonth.beginningBalance,month:firstMonth.label},...state.allTx.map(tx=>({label:tx.date,value:tx.balance,month:tx.month}))];
+  const min=Math.min(...points.map(point=>point.value));
+  const max=Math.max(...points.map(point=>point.value));
+  const range=max-min||1;
+  const xOf=index=>padLeft+(index/(points.length-1))*chartWidth;
+  const yOf=value=>padTop+chartHeight-((value-min)/range)*chartHeight;
+
+  ctx.clearRect(0,0,width,height);
+  [0,0.25,0.5,0.75,1].forEach(step=>{
+    const y=padTop+chartHeight*(1-step);
+    ctx.strokeStyle='#1A1A30';
+    ctx.lineWidth=1;
+    ctx.beginPath();
+    ctx.moveTo(padLeft,y);
+    ctx.lineTo(width-padRight,y);
+    ctx.stroke();
+    ctx.fillStyle='#44445A';
+    ctx.font='9px Space Mono,monospace';
+    ctx.textAlign='right';
+    ctx.fillText('฿'+fmtCompact(min+range*step),padLeft-6,y+3);
+  });
+
+  const gradient=ctx.createLinearGradient(0,padTop,0,padTop+chartHeight);
+  gradient.addColorStop(0,'rgba(0,229,176,.22)');
+  gradient.addColorStop(1,'rgba(0,229,176,0)');
+
+  ctx.beginPath();
+  ctx.moveTo(xOf(0),yOf(points[0].value));
+  points.forEach((point,index)=>{if(index>0)ctx.lineTo(xOf(index),yOf(point.value));});
+  ctx.lineTo(xOf(points.length-1),padTop+chartHeight);
+  ctx.lineTo(xOf(0),padTop+chartHeight);
+  ctx.closePath();
+  ctx.fillStyle=gradient;
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(xOf(0),yOf(points[0].value));
+  points.forEach((point,index)=>{if(index>0)ctx.lineTo(xOf(index),yOf(point.value));});
+  ctx.strokeStyle='#00E5B0';
+  ctx.lineWidth=2;
+  ctx.stroke();
+
+  const monthMarkers={};
+  points.forEach((point,index)=>{
+    if(!monthMarkers[point.month])monthMarkers[point.month]=index;
+  });
+
+  ctx.setLineDash([4,4]);
+  Object.entries(monthMarkers).forEach(([month,index])=>{
+    if(index===0)return;
+    const x=xOf(index);
+    ctx.strokeStyle='rgba(255,255,255,.06)';
+    ctx.lineWidth=1;
+    ctx.beginPath();
+    ctx.moveTo(x,padTop);
+    ctx.lineTo(x,padTop+chartHeight);
+    ctx.stroke();
+    ctx.fillStyle='#44445A';
+    ctx.font='9px Space Mono,monospace';
+    ctx.textAlign='center';
+    ctx.fillText(shortMonth(month),x,height-4);
+  });
+  ctx.setLineDash([]);
+
+  Object.values(monthMarkers).forEach(index=>{
+    ctx.beginPath();
+    ctx.arc(xOf(index),yOf(points[index].value),4,0,Math.PI*2);
+    ctx.fillStyle='#00E5B0';
+    ctx.strokeStyle='#070710';
+    ctx.lineWidth=2;
+    ctx.fill();
+    ctx.stroke();
+  });
+
+  document.getElementById('trendBadge').textContent=`${state.months[state.months.length-1].label} close`;
+}
+
+function drawMonthly(){
+  if(!state.months.length)return;
+  const {ctx,width,height}=setupCanvas('monthlyChart',210);
+  const padLeft=62;
+  const padRight=16;
+  const padTop=16;
+  const padBottom=36;
+  const chartWidth=width-padLeft-padRight;
+  const chartHeight=height-padTop-padBottom;
+  const revenues=state.months.map(month=>month.totalRevenue);
+  const expenses=state.months.map(month=>month.totalExpenses);
+  const max=Math.max(...revenues,...expenses,1);
+  const bandWidth=chartWidth/state.months.length;
+  const barWidth=Math.min(bandWidth*0.28,28);
+  const gap=5;
+
+  ctx.clearRect(0,0,width,height);
+  [0,0.25,0.5,0.75,1].forEach(step=>{
+    const y=padTop+chartHeight*(1-step);
+    ctx.strokeStyle='#1A1A30';
+    ctx.lineWidth=1;
+    ctx.beginPath();
+    ctx.moveTo(padLeft,y);
+    ctx.lineTo(width-padRight,y);
+    ctx.stroke();
+    ctx.fillStyle='#44445A';
+    ctx.font='9px Space Mono,monospace';
+    ctx.textAlign='right';
+    ctx.fillText('฿'+fmtCompact(max*step),padLeft-6,y+3);
+  });
+
+  state.months.forEach((month,index)=>{
+    const centerX=padLeft+index*bandWidth+bandWidth/2;
+    const incomeHeight=(month.totalRevenue/max)*chartHeight;
+    const expenseHeight=(month.totalExpenses/max)*chartHeight;
+
+    const incomeGradient=ctx.createLinearGradient(0,padTop+chartHeight-incomeHeight,0,padTop+chartHeight);
+    incomeGradient.addColorStop(0,'rgba(0,229,176,.9)');
+    incomeGradient.addColorStop(1,'rgba(0,229,176,.3)');
+    ctx.fillStyle=incomeGradient;
+    drawRoundedRect(ctx,centerX-barWidth-gap/2,padTop+chartHeight-incomeHeight,barWidth,incomeHeight,3);
+    ctx.fill();
+
+    const expenseGradient=ctx.createLinearGradient(0,padTop+chartHeight-expenseHeight,0,padTop+chartHeight);
+    expenseGradient.addColorStop(0,'rgba(255,79,110,.9)');
+    expenseGradient.addColorStop(1,'rgba(255,79,110,.3)');
+    ctx.fillStyle=expenseGradient;
+    drawRoundedRect(ctx,centerX+gap/2,padTop+chartHeight-expenseHeight,barWidth,expenseHeight,3);
+    ctx.fill();
+
+    ctx.fillStyle='#5A5A80';
+    ctx.font='9px Space Mono,monospace';
+    ctx.textAlign='center';
+    ctx.fillText(shortMonth(month.label),centerX,height-4);
+  });
+
+  ctx.font='10px Outfit,sans-serif';
+  ctx.textAlign='left';
+  ctx.fillStyle='rgba(0,229,176,.9)';
+  ctx.fillRect(padLeft,height-10,8,8);
+  ctx.fillStyle='#8080A0';
+  ctx.fillText('Revenue',padLeft+12,height-2);
+  ctx.fillStyle='rgba(255,79,110,.9)';
+  ctx.fillRect(padLeft+75,height-10,8,8);
+  ctx.fillStyle='#8080A0';
+  ctx.fillText('Expenses',padLeft+87,height-2);
+}
+
+function drawCatChart(){
+  const expenseTotals={};
+  state.allTx.filter(tx=>tx.direction==='OUT').forEach(tx=>{
+    expenseTotals[tx.category]=(expenseTotals[tx.category]||0)+tx.amount;
+  });
+  const data=Object.entries(expenseTotals).sort((left,right)=>right[1]-left[1]).slice(0,7);
+  if(!data.length)return;
+  const {ctx,width,height}=setupCanvas('catChart',280);
+  const total=data.reduce((sum,[,value])=>sum+value,0);
+  const centerX=width/2;
+  const centerY=height/2-12;
+  const radius=Math.min(centerX,centerY)-42;
+  let startAngle=-Math.PI/2;
+
+  ctx.clearRect(0,0,width,height);
+  data.forEach(([category,value])=>{
+    const slice=(value/total)*Math.PI*2;
+    const color=CATEGORY_COLORS[category]||'#555';
+    ctx.beginPath();
+    ctx.moveTo(centerX,centerY);
+    ctx.arc(centerX,centerY,radius,startAngle,startAngle+slice);
+    ctx.closePath();
+    ctx.fillStyle=color;
+    ctx.fill();
+    ctx.strokeStyle='#070710';
+    ctx.lineWidth=2;
+    ctx.stroke();
+    if(slice>0.3){
+      const mid=startAngle+slice/2;
+      const labelX=centerX+Math.cos(mid)*(radius*0.65);
+      const labelY=centerY+Math.sin(mid)*(radius*0.65);
+      ctx.fillStyle='rgba(7,7,16,.85)';
+      ctx.font='bold 10px Outfit,sans-serif';
+      ctx.textAlign='center';
+      ctx.fillText(`${((value/total)*100).toFixed(0)}%`,labelX,labelY);
+    }
+    startAngle+=slice;
+  });
+
+  ctx.beginPath();
+  ctx.arc(centerX,centerY,radius*0.45,0,Math.PI*2);
+  ctx.fillStyle='#0D0D1C';
+  ctx.fill();
+  ctx.fillStyle='#8080A0';
+  ctx.font='9px Space Mono,monospace';
+  ctx.textAlign='center';
+  ctx.fillText('OUTFLOWS',centerX,centerY-4);
+  ctx.fillStyle='#E0E0F0';
+  ctx.font='bold 12px Space Mono,monospace';
+  ctx.fillText(fmt(total),centerX,centerY+13);
+
+  let legendY=height-data.length*15-4;
+  data.forEach(([category,value])=>{
+    const color=CATEGORY_COLORS[category]||'#555';
+    ctx.fillStyle=color;
+    ctx.fillRect(8,legendY,9,9);
+    ctx.fillStyle='#8080A0';
+    ctx.font='10px Outfit,sans-serif';
+    ctx.textAlign='left';
+    ctx.fillText(`${category} — ${fmt(value)}`,22,legendY+8);
+    legendY+=15;
+  });
+}
+
+function drawCatTrend(){
+  if(state.months.length<2)return;
+  const {ctx,width,height}=setupCanvas('catTrendChart',200);
+  const padLeft=62;
+  const padRight=16;
+  const padTop=16;
+  const padBottom=42;
+  const chartWidth=width-padLeft-padRight;
+  const chartHeight=height-padTop-padBottom;
+  const series=[
+    {label:'Total Payroll',values:state.months.map(month=>month.totalPayroll),color:'#FF4F6E'},
+    {label:'Operations',values:state.months.map(month=>month.operationsSpend),color:'#FFB347'},
+    {label:'Tax',values:state.months.map(month=>month.taxPaid),color:'#6B6BFF'},
+    {label:'Cashback',values:state.months.map(month=>month.cashback),color:'#00C8E5'}
+  ];
+  const max=Math.max(...series.flatMap(item=>item.values),1);
+  const xOf=index=>padLeft+index*(chartWidth/(state.months.length-1));
+  const yOf=value=>padTop+chartHeight-(value/max)*chartHeight;
+
+  ctx.clearRect(0,0,width,height);
+  [0,0.5,1].forEach(step=>{
+    const y=padTop+chartHeight*(1-step);
+    ctx.strokeStyle='#1A1A30';
+    ctx.lineWidth=1;
+    ctx.beginPath();
+    ctx.moveTo(padLeft,y);
+    ctx.lineTo(width-padRight,y);
+    ctx.stroke();
+    ctx.fillStyle='#44445A';
+    ctx.font='9px Space Mono,monospace';
+    ctx.textAlign='right';
+    ctx.fillText('฿'+fmtCompact(max*step),padLeft-6,y+3);
+  });
+
+  series.forEach(item=>{
+    if(item.values.every(value=>value===0))return;
+    ctx.beginPath();
+    item.values.forEach((value,index)=>{
+      const x=xOf(index);
+      const y=yOf(value);
+      if(index===0)ctx.moveTo(x,y);
+      else ctx.lineTo(x,y);
+    });
+    ctx.strokeStyle=item.color;
+    ctx.lineWidth=2;
+    ctx.stroke();
+    item.values.forEach((value,index)=>{
+      if(value===0)return;
+      ctx.beginPath();
+      ctx.arc(xOf(index),yOf(value),3,0,Math.PI*2);
+      ctx.fillStyle=item.color;
+      ctx.strokeStyle='#070710';
+      ctx.lineWidth=1;
+      ctx.fill();
+      ctx.stroke();
+    });
+  });
+
+  state.months.forEach((month,index)=>{
+    ctx.fillStyle='#5A5A80';
+    ctx.font='9px Space Mono,monospace';
+    ctx.textAlign='center';
+    ctx.fillText(shortMonth(month.label),xOf(index),height-22);
+  });
+
+  const legendY=height-10;
+  const legendSpacing=Math.floor((width-padLeft-padRight)/series.length);
+  series.forEach((item,index)=>{
+    const x=padLeft+index*legendSpacing;
+    ctx.fillStyle=item.color;
+    ctx.fillRect(x,legendY-8,8,8);
+    ctx.fillStyle='#8080A0';
+    ctx.font='9px Outfit,sans-serif';
+    ctx.textAlign='left';
+    ctx.fillText(item.label,x+11,legendY);
+  });
+}
+
+function switchTab(id,button){
+  document.querySelectorAll('.tab-panel').forEach(panel=>panel.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(tab=>tab.classList.remove('active'));
+  document.getElementById(`tab-${id}`).classList.add('active');
+  button.classList.add('active');
+  setTimeout(()=>{
+    if(id==='overview'){
+      drawTrend();
+      drawMonthly();
+    }
+    if(id==='categories'){
+      drawCatChart();
+      drawCatTrend();
+    }
+  },50);
+}
+
+function exportCSV(){
+  const header=['Month','Date','Time','Transaction Code','Description','Counterparty','Amount (THB)','Direction','Category','Running Balance'];
+  const rows=state.allTx.map(tx=>[
+    tx.month,
+    tx.date,
+    tx.time,
+    tx.code,
+    `"${tx.description.replace(/"/g,'""')}"`,
+    `"${tx.counterparty.replace(/"/g,'""')}"`,
+    tx.amount.toFixed(2),
+    tx.direction,
+    tx.category,
+    tx.balance.toFixed(2)
+  ]);
+  const csv=[header,...rows].map(row=>row.join(',')).join('\n');
+  const link=document.createElement('a');
+  link.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  link.download='gogocash_q1_2026_dashboard_export.csv';
+  link.click();
+}
+
+function initDashboard(){
+  buildState();
+  document.getElementById('mainContent').style.display='block';
+  document.getElementById('noData').style.display='none';
+  document.getElementById('exportBtn').style.display='flex';
+  renderProjectSummary();
+  updatePills();
+  renderKPIs();
+  renderInsights();
+  renderIA();
+  renderMonthlyTable();
+  renderTxFilters();
+  filterTx();
+  renderCats();
+  setTimeout(()=>{
+    drawTrend();
+    drawMonthly();
+  },80);
+}
+
+window.addEventListener('resize',()=>{
+  if(!state.months.length)return;
+  const active=document.querySelector('.tab-panel.active');
+  if(active?.id==='tab-overview'){
+    drawTrend();
+    drawMonthly();
+  }
+  if(active?.id==='tab-categories'){
+    drawCatChart();
+    drawCatTrend();
+  }
+});
+
+const style=document.createElement('style');
+style.textContent='@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}';
+document.head.appendChild(style);
+
+document.addEventListener('DOMContentLoaded',()=>{
+  try{
+    initDashboard();
+  }catch(error){
+    showErr(error.message||'Unable to initialize dashboard data.');
+    throw error;
+  }
+});
+</script>
+</body>
+</html>
