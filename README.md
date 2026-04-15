@@ -47,6 +47,20 @@ Optional env vars are documented in `apps/web/.env.example`. Local dev serves at
 
 Dev server: [http://localhost:3000](http://localhost:3000) (default).
 
+## GitHub Pages
+
+Live URL: [https://kunanonj.github.io/tres-finos/](https://kunanonj.github.io/tres-finos/)
+
+The site is built by [`.github/workflows/pages.yml`](.github/workflows/pages.yml) on every push to `main` (or manually via **Actions → Deploy GitHub Pages → Run workflow**).
+
+**One-time setup (fix “Failed to create deployment … 404 … Ensure GitHub Pages has been enabled”):**
+
+1. Open **Settings → Pages**: [github.com/KunanonJ/tres-finos/settings/pages](https://github.com/KunanonJ/tres-finos/settings/pages).
+2. Under **Build and deployment**, set **Source** to **GitHub Actions**. Do not use “Deploy from a branch” or a `/docs` folder for this app; those are for branch-based publishing only. This repo publishes the static `out` directory from the workflow artifact.
+3. Save, then re-run the latest **Deploy GitHub Pages** workflow.
+
+If the repository is **private**, GitHub Pages may require a [paid plan or org policy](https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits) that allows Pages on private repos.
+
 ## Project layout
 
 ```text

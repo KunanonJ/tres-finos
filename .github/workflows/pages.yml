@@ -1,8 +1,12 @@
+# Requires one-time repo setup: Settings → Pages → Build and deployment →
+# Source: GitHub Actions (not "Deploy from a branch"). Branch/folder options
+# do not apply to this workflow; see README "GitHub Pages".
 name: Deploy GitHub Pages
 
 on:
   push:
     branches: ["main"]
+  workflow_dispatch:
 
 permissions:
   contents: read
