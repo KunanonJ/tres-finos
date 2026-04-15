@@ -431,7 +431,7 @@ export const OverviewPanel = ({
                   Recurring expenses
                 </p>
                 <p className="mt-3 text-2xl font-semibold tabular-nums">
-                  {formatCurrency(latestMonth.recurringExpenses)}
+                  {latestMonth ? formatCurrency(latestMonth.recurringExpenses) : "—"}
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">Latest month payroll-heavy burn</p>
               </div>
@@ -440,7 +440,7 @@ export const OverviewPanel = ({
                   Variable expenses
                 </p>
                 <p className="mt-3 text-2xl font-semibold tabular-nums">
-                  {formatCurrency(latestMonth.variableExpenses)}
+                  {latestMonth ? formatCurrency(latestMonth.variableExpenses) : "—"}
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
                   Reimbursables, taxes, and partner payouts

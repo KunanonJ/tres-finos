@@ -1,31 +1,32 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { BookOpen, Keyboard, Landmark, Shield } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
-import { dismissOnboarding, ONBOARDING_STORAGE_KEY } from "@/lib/onboardingStorage";
+import {
+  dismissOnboarding,
+  getOnboardingDismissedServerSnapshot,
+  getOnboardingDismissedSnapshot,
+  subscribeOnboardingDismissed,
+} from "@/lib/onboardingStorage";
 
 export const DashboardOnboarding = () => {
-  const [visible, setVisible] = useState(false);
+  const dismissed = useSyncExternalStore(
+    subscribeOnboardingDismissed,
+    getOnboardingDismissedSnapshot,
+    getOnboardingDismissedServerSnapshot,
+  );
 
-  useEffect(() => {
-    setVisible(typeof window !== "undefined" && window.localStorage.getItem(ONBOARDING_STORAGE_KEY) !== "1");
-  }, []);
-
-  if (!visible) {
+  if (dismissed) {
     return null;
   }
-
-  const handleDismiss = () => {
-    dismissOnboarding();
-    setVisible(false);
-  };
 
   return (
     <section
       className="no-print rounded-[1.25rem] border border-primary/30 bg-primary/10 px-5 py-4 sm:px-6"
       aria-labelledby="onboarding-title"
+      suppressHydrationWarning
     >
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0 space-y-3">
@@ -68,7 +69,7 @@ export const DashboardOnboarding = () => {
             </li>
           </ul>
         </div>
-        <Button type="button" className="shrink-0 lg:self-center" onClick={handleDismiss}>
+        <Button type="button" className="shrink-0 lg:self-center" onClick={dismissOnboarding}>
           Got it
         </Button>
       </div>

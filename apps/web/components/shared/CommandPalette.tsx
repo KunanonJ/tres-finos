@@ -23,22 +23,23 @@ type CommandItem = {
   run: () => void;
 };
 
-export const CommandPalette = ({
+type CommandPaletteDialogProps = {
+  monthNames: string[];
+  onApply: (updates: Partial<DashboardUrlState>) => void;
+  onOpenChange: (open: boolean) => void;
+  scopeMonth: string;
+};
+
+/** Mounted only while `open` so search state resets when the palette closes (no effect-based reset). */
+const CommandPaletteDialog = ({
   monthNames,
   onApply,
   onOpenChange,
-  open,
   scopeMonth,
-}: CommandPaletteProps) => {
+}: CommandPaletteDialogProps) => {
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) {
-      setQuery("");
-    }
-  }, [open]);
 
   const commands = useMemo<CommandItem[]>(() => {
     const tabs: { id: DashboardTab; label: string }[] = [
@@ -154,31 +155,9 @@ export const CommandPalette = ({
     return [...map.entries()];
   }, [filtered]);
 
-  const openRef = useRef(open);
-  openRef.current = open;
-
   useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        onOpenChange(!openRef.current);
-      }
-
-      if (event.key === "Escape" && openRef.current) {
-        event.preventDefault();
-        onOpenChange(false);
-      }
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onOpenChange]);
-
-  useEffect(() => {
-    if (open) {
-      window.setTimeout(() => inputRef.current?.focus(), 0);
-    }
-  }, [open]);
+    window.setTimeout(() => inputRef.current?.focus(), 0);
+  }, []);
 
   const closeOnOutside = useCallback(
     (event: MouseEvent) => {
@@ -190,17 +169,9 @@ export const CommandPalette = ({
   );
 
   useEffect(() => {
-    if (!open) {
-      return;
-    }
-
     document.addEventListener("mousedown", closeOnOutside);
     return () => document.removeEventListener("mousedown", closeOnOutside);
-  }, [closeOnOutside, open]);
-
-  if (!open) {
-    return null;
-  }
+  }, [closeOnOutside]);
 
   return (
     <div
@@ -257,5 +228,49 @@ export const CommandPalette = ({
         </p>
       </div>
     </div>
+  );
+};
+
+export const CommandPalette = ({
+  monthNames,
+  onApply,
+  onOpenChange,
+  open,
+  scopeMonth,
+}: CommandPaletteProps) => {
+  const openRef = useRef(open);
+
+  useEffect(() => {
+    openRef.current = open;
+  }, [open]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        onOpenChange(!openRef.current);
+      }
+
+      if (event.key === "Escape" && openRef.current) {
+        event.preventDefault();
+        onOpenChange(false);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onOpenChange]);
+
+  if (!open) {
+    return null;
+  }
+
+  return (
+    <CommandPaletteDialog
+      monthNames={monthNames}
+      onApply={onApply}
+      onOpenChange={onOpenChange}
+      scopeMonth={scopeMonth}
+    />
   );
 };

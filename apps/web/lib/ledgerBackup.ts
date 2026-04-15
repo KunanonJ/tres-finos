@@ -7,7 +7,7 @@ export const LEDGER_BACKUP_VERSION = 1 as const;
 const backupSchema = z.object({
   version: z.literal(LEDGER_BACKUP_VERSION),
   exportedAt: z.string(),
-  bankStatements: z.record(z.string()),
+  bankStatements: z.record(z.string(), z.string()),
 });
 
 export type LedgerBackupFile = z.infer<typeof backupSchema>;

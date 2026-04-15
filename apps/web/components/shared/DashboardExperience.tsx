@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useMemo, useSyncExternalStore } from "react";
-import { Calendar, Landmark } from "lucide-react";
+import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
+import { Calendar, Landmark, Search } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { formatCurrency } from "@/lib/formatters";
 import { useMergedDashboardData } from "@/hooks/useMergedDashboardData";
 import {
@@ -23,6 +24,9 @@ import {
 
 import { BankStatementManager } from "@/components/shared/BankStatementManager";
 import { CategoriesPanel } from "@/components/shared/CategoriesPanel";
+import { CommandPalette } from "@/components/shared/CommandPalette";
+import { DashboardDataTools } from "@/components/shared/DashboardDataTools";
+import { DashboardOnboarding } from "@/components/shared/DashboardOnboarding";
 import { DashboardScopeBar } from "@/components/shared/DashboardScopeBar";
 import { DashboardTabs } from "@/components/shared/DashboardTabs";
 import { MonthlyPnlPanel } from "@/components/shared/MonthlyPnlPanel";
@@ -39,6 +43,7 @@ export const DashboardExperience = ({ data: serverData }: DashboardExperiencePro
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [commandOpen, setCommandOpen] = useState(false);
 
   const storageSnapshot = useSyncExternalStore(
     subscribeBankStatements,
@@ -67,6 +72,16 @@ export const DashboardExperience = ({ data: serverData }: DashboardExperiencePro
     return monthNames.includes(urlState.month) ? urlState.month : "all";
   }, [monthNames, urlState.month]);
 
+  const compareEffective = useMemo(() => {
+    if (scopeMonth === "all" || !urlState.compare.trim()) {
+      return "";
+    }
+
+    return monthNames.includes(urlState.compare) && urlState.compare !== scopeMonth
+      ? urlState.compare
+      : "";
+  }, [monthNames, scopeMonth, urlState.compare]);
+
   const replaceUrl = useCallback(
     (updates: Partial<typeof urlState>) => {
       const nextHref = buildDashboardUrl({
@@ -88,7 +103,24 @@ export const DashboardExperience = ({ data: serverData }: DashboardExperiencePro
 
   const setScopeMonth = useCallback(
     (month: string) => {
-      replaceUrl({ month: month === "all" ? "all" : month });
+      const nextMonth = month === "all" ? "all" : month;
+      const updates: Partial<typeof urlState> = {
+        month: nextMonth,
+        ...(nextMonth === "all" ? { compare: "" } : {}),
+      };
+
+      if (nextMonth !== "all" && urlState.compare === nextMonth) {
+        updates.compare = "";
+      }
+
+      replaceUrl(updates);
+    },
+    [replaceUrl, urlState.compare],
+  );
+
+  const applyUrlUpdates = useCallback(
+    (updates: Partial<typeof urlState>) => {
+      replaceUrl(updates);
     },
     [replaceUrl],
   );
@@ -126,7 +158,14 @@ export const DashboardExperience = ({ data: serverData }: DashboardExperiencePro
 
   return (
     <div className="dashboard-shell">
-      <header className="interactive-surface-slow flex flex-col gap-4 rounded-[1.75rem] border border-border/80 bg-card/80 px-5 py-5 shadow-[0_24px_80px_rgba(3,6,18,0.45)] backdrop-blur hover:border-primary/20 sm:px-6 sm:py-6">
+      <CommandPalette
+        open={commandOpen}
+        onOpenChange={setCommandOpen}
+        monthNames={monthNames}
+        scopeMonth={scopeMonth}
+        onApply={applyUrlUpdates}
+      />
+      <header className="no-print interactive-surface-slow flex flex-col gap-4 rounded-[1.75rem] border border-border/80 bg-card/80 px-5 py-5 shadow-[0_24px_80px_rgba(3,6,18,0.45)] backdrop-blur hover:border-primary/20 sm:px-6 sm:py-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-start gap-3">
             <div className="interactive-surface rounded-2xl border border-primary/35 bg-primary/15 p-3 text-primary hover:border-primary/50">
@@ -151,6 +190,19 @@ export const DashboardExperience = ({ data: serverData }: DashboardExperiencePro
             </div>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end sm:gap-4">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="gap-2"
+              onClick={() => setCommandOpen(true)}
+            >
+              <Search className="size-4" aria-hidden />
+              <span className="hidden sm:inline">Search &amp; jump</span>
+              <kbd className="hidden rounded border border-border px-1.5 font-mono text-[0.65rem] sm:inline">
+                ⌘K
+              </kbd>
+            </Button>
             <ThemeToggle />
             <div className="interactive-surface flex flex-wrap items-center gap-2 rounded-[1.25rem] border border-border/70 bg-background/40 px-4 py-3 hover:border-primary/25 lg:justify-end">
               <span className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
@@ -164,15 +216,36 @@ export const DashboardExperience = ({ data: serverData }: DashboardExperiencePro
         </div>
       </header>
 
+      <div className="no-print mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <DashboardDataTools
+          transactions={data.transactions}
+          exportFilenameBase="tres-finos-transactions"
+          activeMonth={scopeMonth}
+          direction={urlState.dir}
+          searchQuery={urlState.q}
+          category={urlState.cat}
+        />
+      </div>
+
+      <DashboardOnboarding />
+
       <DashboardScopeBar
         monthLabels={monthNames}
         scopeMonth={scopeMonth}
         onScopeMonthChange={setScopeMonth}
+        compareMonth={compareEffective}
+        onCompareMonthChange={(month) => replaceUrl({ compare: month })}
       />
 
       <BankStatementManager monthNames={bankStatementMonthNames} statementsSnapshot={storageSnapshot} />
 
-      <div id="dashboard-main" tabIndex={-1}>
+      <div id="dashboard-main" className="print-main" tabIndex={-1}>
+        <div className="mb-6 hidden print:block">
+          <h1 className="font-heading text-xl font-semibold">Tres Finos CFO Console</h1>
+          <p className="text-sm text-muted-foreground">
+            {periodLabel} · {data.transactions.length} movements
+          </p>
+        </div>
         <DashboardTabs
           value={urlState.tab}
           onValueChange={setTab}
@@ -180,6 +253,7 @@ export const DashboardExperience = ({ data: serverData }: DashboardExperiencePro
             <OverviewPanel
               data={data}
               scopeMonth={scopeMonth}
+              compareToMonth={compareEffective}
               onSetScopeMonth={setScopeMonth}
               onViewTransactions={viewTransactions}
             />
