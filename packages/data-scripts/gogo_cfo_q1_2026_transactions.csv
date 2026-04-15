@@ -1,0 +1,72 @@
+Month,Date,Time,Transaction Code,Description,Counterparty,Amount (THB),Direction,Category,Running Balance
+January 2026,05/01/2026,20:20,PBSWT,TR to 9836955453 SAYRUNG JAIBUN,SAYRUNG JAIBUN,29100.00,OUT,Payroll – Management,221411.12
+January 2026,19/01/2026,15:08,NBSDT,TR fr 6900478654,6900478654,21021.89,IN,Internal Transfer IN,242433.01
+January 2026,28/01/2026,07:51,PBSWT,TR to 6900478654 MR.Kunanon Jarat,MR.Kunanon Jarat,6864.00,OUT,Operations & Reimbursable,235569.01
+January 2026,28/01/2026,12:57,BSD22,BPS/017/04/INVOLVE ASIA (THAILAND) CO. LTD./108682 Corporate Online,Involve Asia (Thailand) Co. Ltd.,42980.26,IN,Affiliate Revenue,278549.27
+January 2026,29/01/2026,18:18,PBPSWP,099400015844113 0323568000161 REVENUE DEPARTMENT Corporate Online,Revenue Department,7365.62,OUT,Tax & Government,271183.65
+January 2026,29/01/2026,18:23,PBSWT,TR to 9836955453 SAYRUNG JAIBUN,SAYRUNG JAIBUN,29100.00,OUT,Payroll – Management,242083.65
+January 2026,30/01/2026,01:55,IORSWT,TR to 2272052144 Nattaya Ketawalh,Nattaya Ketawalh,19400.00,OUT,Payroll – Core Staff,222683.65
+January 2026,30/01/2026,01:55,IORSFE,Transaction Fee,Krungthai Bank,5.00,OUT,Bank Fees,222678.65
+January 2026,30/01/2026,01:55,IORSWT,TR to 0932869012 Pittaya Suteerawut,Pittaya Suteerawut,4818.68,OUT,Payroll – Core Staff,217859.97
+January 2026,30/01/2026,01:55,IORSFE,Transaction Fee,Krungthai Bank,5.00,OUT,Bank Fees,217854.97
+January 2026,30/01/2026,01:56,IORSWT,TR to 1918048002 UI 3 ACCOUNT CO. LTD.,UI 3 Account Co. Ltd.,4850.00,OUT,Professional Services,213004.97
+January 2026,30/01/2026,01:56,IORSFE,Transaction Fee,Krungthai Bank,5.00,OUT,Bank Fees,212999.97
+January 2026,30/01/2026,13:46,PBSWT,TR to 6900478654 MR.Kunanon Jarat,MR.Kunanon Jarat,1555.52,OUT,Operations & Reimbursable,211444.45
+January 2026,30/01/2026,13:47,PBSWT,TR to 6900478654 MR.Kunanon Jarat,MR.Kunanon Jarat,950.16,OUT,Operations & Reimbursable,210494.29
+January 2026,30/01/2026,14:36,PBSWT,TR to 6900478654 MR.Kunanon Jarat,MR.Kunanon Jarat,279.99,OUT,Operations & Reimbursable,210214.30
+January 2026,30/01/2026,15:09,PBSWT,TR to 6900478654 MR.Kunanon Jarat,MR.Kunanon Jarat,31.10,OUT,Operations & Reimbursable,210183.20
+January 2026,30/01/2026,18:39,XISDT,IWRM:111.6100USD:Alibaba.com Singapore E,Alibaba.com Singapore,3446.74,IN,International Revenue,213629.94
+February 2026,01/02/2026,14:59,PBSWT,TR to 6900478654 MR.Kunanon Jarat,MR.Kunanon Jarat,3629.54,OUT,Operations & Reimbursable,210000.40
+February 2026,02/02/2026,12:56,BSD22,BPS/017/04/INVOLVE ASIA (THAILAND) CO. LTD./108682 Corporate Online,Involve Asia (Thailand) Co. Ltd.,53150.26,IN,Affiliate Revenue,263150.66
+February 2026,03/02/2026,20:56,IORSWT,TR to 2470879582 Uthumporn Khaoleuang,Uthumporn Khaoleuang,484.61,OUT,Affiliate Cashback OUT,262666.05
+February 2026,03/02/2026,20:56,IORSFE,Transaction Fee,Krungthai Bank,5.00,OUT,Bank Fees,262661.05
+February 2026,07/02/2026,01:51,IORSWT,TR to 0072403569 Sirichai Wongsanitivanich,Sirichai Wongsanitivanich,176.85,OUT,Affiliate Cashback OUT,262484.20
+February 2026,07/02/2026,01:51,IORSFE,Transaction Fee,Krungthai Bank,5.00,OUT,Bank Fees,262479.20
+February 2026,10/02/2026,21:27,PBSWT,TR to 6900478654 MR.Kunanon Jarat,MR.Kunanon Jarat,2137.14,OUT,Operations & Reimbursable,260342.06
+February 2026,11/02/2026,14:56,PBPSWP,099400015844113 0323568000161 REVENUE DEPARTMENT Corporate Online,Revenue Department,3281.77,OUT,Tax & Government,257060.29
+February 2026,11/02/2026,19:05,IORSWT,TR to 7512480493 As one audit company limited,As One Audit Co. Ltd.,10000.00,OUT,Professional Services,247060.29
+February 2026,11/02/2026,19:05,IORSFE,Transaction Fee,Krungthai Bank,5.00,OUT,Bank Fees,247055.29
+February 2026,11/02/2026,19:07,IORSWT,TR to 1918048002 Ui 3 account Co. Ltd.,UI 3 Account Co. Ltd.,14000.00,OUT,Professional Services,233055.29
+February 2026,11/02/2026,19:07,IORSFE,Transaction Fee,Krungthai Bank,5.00,OUT,Bank Fees,233050.29
+February 2026,11/02/2026,19:51,IORSDT,004-1918048002,004-1918048002,120.00,IN,Internal Transfer IN,233170.29
+February 2026,12/02/2026,10:28,IORSDT,004-7512480493,004-7512480493,300.00,IN,Internal Transfer IN,233470.29
+February 2026,16/02/2026,10:49,PBSWT,TR to 6900478654 MR.Kunanon Jarat,MR.Kunanon Jarat,1417.30,OUT,Operations & Reimbursable,232052.99
+February 2026,17/02/2026,15:35,IORSWT,TR to 0328395193 Warot Sonrabeab,Warot Sonrabeab,120.44,OUT,Affiliate Cashback OUT,231932.55
+February 2026,17/02/2026,15:35,IORSFE,Transaction Fee,Krungthai Bank,5.00,OUT,Bank Fees,231927.55
+February 2026,22/02/2026,20:10,PBSWT,TR to 6900478654 MR.Kunanon Jarat,MR.Kunanon Jarat,775.75,OUT,Operations & Reimbursable,231151.80
+February 2026,24/02/2026,12:56,BSD22,BPS/017/04/INVOLVE ASIA (THAILAND) CO. LTD./108682 Corporate Online,Involve Asia (Thailand) Co. Ltd.,16641.20,IN,Affiliate Revenue,247793.00
+February 2026,27/02/2026,02:00,PBSWT,TR to 9836955453 SAYRUNG JAIBUN,SAYRUNG JAIBUN,29100.00,OUT,Payroll – Management,218693.00
+February 2026,27/02/2026,02:00,IORSWT,TR to 0932869012 Mr. Pittaya Suthirawut,Pittaya Suteerawut,13580.00,OUT,Payroll – Core Staff,205113.00
+February 2026,27/02/2026,02:00,IORSFE,Transaction Fee,Krungthai Bank,5.00,OUT,Bank Fees,205108.00
+February 2026,27/02/2026,02:00,IORSWT,TR to 1158152254 Phatsara Tiathawornchai,Phatsara Tiathawornchai,9700.00,OUT,Payroll – Core Staff,195408.00
+February 2026,27/02/2026,02:00,IORSFE,Transaction Fee,Krungthai Bank,5.00,OUT,Bank Fees,195403.00
+February 2026,27/02/2026,02:00,IORSWT,TR to 2272052144 Nattaya Ketawalh,Nattaya Ketawalh,19400.00,OUT,Payroll – Core Staff,176003.00
+February 2026,27/02/2026,02:00,IORSFE,Transaction Fee,Krungthai Bank,5.00,OUT,Bank Fees,175998.00
+March 2026,03/03/2026,10:27,PBSWT,TR to 6900478654 MR.Kunanon Jarat,MR.Kunanon Jarat,5266.40,OUT,Operations & Reimbursable,170731.60
+March 2026,09/03/2026,12:48,BSD22,BPS/017/04/INVOLVE ASIA (THAILAND) CO. LTD./108682 Corporate Online,Involve Asia (Thailand) Co. Ltd.,15135.69,IN,Affiliate Revenue,185867.29
+March 2026,09/03/2026,14:45,IORSWT,TR to 1052165253 Chataya Thanesphatisuk,Chataya Thanesphatisuk,81.81,OUT,Affiliate Cashback OUT,185785.48
+March 2026,09/03/2026,14:45,IORSFE,Transaction Fee,Krungthai Bank,5.00,OUT,Bank Fees,185780.48
+March 2026,09/03/2026,17:26,XISDT,IWRM:91.7100USD:Alibaba.com Singapore E-,Alibaba.com Singapore,2879.22,IN,International Revenue,188659.70
+March 2026,10/03/2026,16:28,IORSWT,TR to 6290289500 PIYAPAN KANTAKART,PIYAPAN KANTAKART,219.86,OUT,Affiliate Cashback OUT,188439.84
+March 2026,10/03/2026,16:28,IORSFE,Transaction Fee,Krungthai Bank,5.00,OUT,Bank Fees,188434.84
+March 2026,11/03/2026,22:02,PBSWT,TR to 9836955453 SAYRUNG JAIBUN,SAYRUNG JAIBUN,5335.00,OUT,Payroll – Management,183099.84
+March 2026,12/03/2026,20:08,PBSWT,TR to 9836955453 SAYRUNG JAIBUN,SAYRUNG JAIBUN,9700.00,OUT,Payroll – Management,173399.84
+March 2026,14/03/2026,18:27,PBSWT,TR to 6900478654 MR.Kunanon Jarat,MR.Kunanon Jarat,5350.00,OUT,Operations & Reimbursable,168049.84
+March 2026,17/03/2026,17:47,NMPSWP,099400015844114-0323568000161,Revenue Department,830.80,OUT,Tax & Government,167219.04
+March 2026,17/03/2026,18:01,NMPSWP,099400015844114-0323568000161,Revenue Department,2353.30,OUT,Tax & Government,164865.74
+March 2026,17/03/2026,20:31,PBSWT,TR to 6900478654 MR.Kunanon Jarat,MR.Kunanon Jarat,1369.60,OUT,Operations & Reimbursable,163496.14
+March 2026,17/03/2026,20:35,PBSWT,TR to 6900478654 MR.Kunanon Jarat,MR.Kunanon Jarat,4942.99,OUT,Operations & Reimbursable,158553.15
+March 2026,20/03/2026,12:52,PBSWT,TR to 6900478654 MR.Kunanon Jarat,MR.Kunanon Jarat,9900.00,OUT,Operations & Reimbursable,148653.15
+March 2026,20/03/2026,19:15,IORSWT,TR to 054570537339 Apichat Phonrom,Apichat Phonrom,241.20,OUT,Affiliate Cashback OUT,148411.95
+March 2026,20/03/2026,19:15,IORSFE,Transaction Fee,Krungthai Bank,5.00,OUT,Bank Fees,148406.95
+March 2026,20/03/2026,20:06,IORSWT,TR to 4671108377 Sumet Amornhiransiri,Sumet Amornhiransiri,423.83,OUT,Affiliate Cashback OUT,147983.12
+March 2026,20/03/2026,20:06,IORSFE,Transaction Fee,Krungthai Bank,5.00,OUT,Bank Fees,147978.12
+March 2026,26/03/2026,08:02,PBSWT,TR to 9321339019 Charuwat Tantitechanan,Charuwat Tantitechanan,2002.91,OUT,Affiliate Cashback OUT,145975.21
+March 2026,26/03/2026,08:04,IORSWT,TR to 5812253176 Sarash Haruencheep,Sarash Haruencheep,678.84,OUT,Affiliate Cashback OUT,145296.37
+March 2026,26/03/2026,08:04,IORSFE,Transaction Fee,Krungthai Bank,5.00,OUT,Bank Fees,145291.37
+March 2026,27/03/2026,13:03,BSD22,BPS/017/04/INVOLVE ASIA (THAILAND) CO. LTD./108682 Corporate Online,Involve Asia (Thailand) Co. Ltd.,19661.98,IN,Affiliate Revenue,164953.35
+March 2026,28/03/2026,12:39,IORSWT,TR to 0188928358 THAMMANIT THONGLOR,THAMMANIT THONGLOR,704.01,OUT,Affiliate Cashback OUT,164249.34
+March 2026,28/03/2026,12:39,IORSFE,Transaction Fee,Krungthai Bank,5.00,OUT,Bank Fees,164244.34
+March 2026,31/03/2026,08:28,PBSWT,TR to 1830825453 Nattaya Ketawalh,Nattaya Ketawalh,19400.00,OUT,Payroll – Core Staff,144844.34
+March 2026,31/03/2026,08:35,PBSWT,TR to 3290351653 MISSPhatsara Tiathawornchai,Phatsara Tiathawornchai,9700.00,OUT,Payroll – Core Staff,135144.34
+March 2026,31/03/2026,13:41,PBSWT,TR to 6656929230 Pittaya Suteerawut,Pittaya Suteerawut,13580.00,OUT,Payroll – Core Staff,121564.34
