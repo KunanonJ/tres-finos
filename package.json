@@ -1,0 +1,13 @@
+{
+  "name": "tres-finos-main",
+  "description": "Tres Finos CFO Console — local-first finance dashboard (Next.js 16, React 19, Tailwind). P&L, transactions, PDF/CSV uploads, backups, command palette.",
+  "private": true,
+  "workspaces": [
+    "apps/web"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace @tres-finos/web",
+    "lint": "npm run lint --workspace @tres-finos/web",
+    "build": "npm run build --workspace @tres-finos/web"
+  }
+}

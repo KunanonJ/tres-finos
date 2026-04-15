@@ -1,0 +1,231 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+:root {
+  --background: oklch(0.15 0.018 262);
+  --foreground: oklch(0.96 0.01 255);
+  --card: oklch(0.19 0.02 260);
+  --card-foreground: oklch(0.96 0.01 255);
+  --popover: oklch(0.18 0.018 260);
+  --popover-foreground: oklch(0.96 0.01 255);
+  --primary: oklch(0.86 0.17 160);
+  --primary-foreground: oklch(0.16 0.02 262);
+  --secondary: oklch(0.26 0.02 260);
+  --secondary-foreground: oklch(0.96 0.01 255);
+  --muted: oklch(0.24 0.02 260);
+  --muted-foreground: oklch(0.82 0.014 260);
+  --accent: oklch(0.27 0.025 258);
+  --accent-foreground: oklch(0.96 0.01 255);
+  --destructive: oklch(0.68 0.22 24);
+  --destructive-foreground: oklch(0.97 0.01 255);
+  --border: oklch(0.3 0.018 258);
+  --input: oklch(0.23 0.02 260);
+  --ring: oklch(0.74 0.13 167);
+  --radius: 1rem;
+  --font-sans: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+  --font-mono: "SFMono-Regular", "SF Mono", "Roboto Mono", "Menlo", monospace;
+  --font-heading: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+  --color-finance-positive: oklch(0.86 0.17 160);
+  --color-finance-warning: oklch(0.84 0.16 85);
+  --color-finance-critical: oklch(0.68 0.22 24);
+  --color-finance-info: oklch(0.74 0.11 245);
+  --color-finance-surface: oklch(0.21 0.02 260 / 0.85);
+  --color-finance-grid: rgb(106 187 167 / 0.08);
+}
+
+html[data-theme="light"] {
+  --background: oklch(0.985 0.004 260);
+  --foreground: oklch(0.22 0.028 262);
+  --card: oklch(0.995 0.003 260);
+  --card-foreground: oklch(0.2 0.03 262);
+  --popover: oklch(1 0.002 260);
+  --popover-foreground: oklch(0.2 0.03 262);
+  --primary: oklch(0.42 0.14 165);
+  --primary-foreground: oklch(0.99 0.005 260);
+  --secondary: oklch(0.94 0.012 260);
+  --secondary-foreground: oklch(0.22 0.028 262);
+  --muted: oklch(0.94 0.01 260);
+  --muted-foreground: oklch(0.45 0.02 260);
+  --accent: oklch(0.93 0.015 258);
+  --accent-foreground: oklch(0.22 0.028 262);
+  --destructive: oklch(0.52 0.2 24);
+  --destructive-foreground: oklch(0.99 0.01 255);
+  --border: oklch(0.88 0.012 260);
+  --input: oklch(0.92 0.01 260);
+  --ring: oklch(0.48 0.12 165);
+  --color-finance-positive: oklch(0.42 0.14 165);
+  --color-finance-warning: oklch(0.55 0.16 75);
+  --color-finance-critical: oklch(0.52 0.2 24);
+  --color-finance-info: oklch(0.48 0.12 250);
+  --color-finance-surface: oklch(0.96 0.01 260 / 0.92);
+  --color-finance-grid: rgb(15 23 42 / 0.06);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-finance-positive: var(--color-finance-positive);
+  --color-finance-warning: var(--color-finance-warning);
+  --color-finance-critical: var(--color-finance-critical);
+  --color-finance-info: var(--color-finance-info);
+  --color-finance-surface: var(--color-finance-surface);
+  --radius-sm: calc(var(--radius) - 0.35rem);
+  --radius-md: calc(var(--radius) - 0.15rem);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 0.3rem);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-heading: var(--font-heading);
+}
+
+* {
+  @apply border-border;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+html {
+  @apply scroll-smooth;
+}
+
+body {
+  @apply bg-background font-sans text-foreground antialiased;
+  background-image:
+    radial-gradient(circle at top left, rgb(0 229 176 / 0.17), transparent 26%),
+    radial-gradient(circle at top right, rgb(89 130 255 / 0.18), transparent 24%),
+    linear-gradient(180deg, rgb(6 9 18 / 1) 0%, rgb(11 16 28 / 1) 45%, rgb(8 10 20 / 1) 100%);
+}
+
+html[data-theme="light"] body {
+  background-image:
+    radial-gradient(circle at top left, rgb(0 160 120 / 0.1), transparent 30%),
+    radial-gradient(circle at top right, rgb(59 130 246 / 0.08), transparent 28%),
+    linear-gradient(180deg, oklch(0.97 0.008 260) 0%, oklch(0.96 0.01 260) 50%, oklch(0.97 0.008 260) 100%);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--color-finance-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-finance-grid) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(circle at center, black 60%, transparent 100%);
+  opacity: 0.9;
+}
+
+html[data-theme="light"] body::before {
+  opacity: 0.55;
+}
+
+::selection {
+  background: rgb(0 229 176 / 0.26);
+  color: var(--foreground);
+}
+
+html[data-theme="light"] ::selection {
+  background: rgb(0 140 110 / 0.22);
+  color: var(--foreground);
+}
+
+.dashboard-shell {
+  @apply relative mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8;
+}
+
+.dashboard-panel {
+  @apply border border-border/80 bg-card/85 shadow-[0_20px_60px_rgba(3,6,18,0.45)] backdrop-blur;
+  @apply motion-safe:transition-[box-shadow,border-color,background-color] motion-safe:duration-300 motion-safe:ease-out;
+}
+
+@layer utilities {
+  .interactive-surface {
+    @apply motion-safe:transition-[color,background-color,border-color,box-shadow,transform,opacity] motion-safe:duration-200 motion-safe:ease-out;
+  }
+
+  .interactive-surface-slow {
+    @apply motion-safe:transition-[color,background-color,border-color,box-shadow,transform,opacity] motion-safe:duration-300 motion-safe:ease-out;
+  }
+}
+
+.dashboard-progress {
+  appearance: none;
+  width: 100%;
+  height: 0.55rem;
+  overflow: hidden;
+  border: none;
+  border-radius: 999px;
+  background-color: rgb(255 255 255 / 0.08);
+}
+
+.dashboard-progress::-webkit-progress-bar {
+  background-color: rgb(255 255 255 / 0.08);
+  border-radius: 999px;
+}
+
+.dashboard-progress::-webkit-progress-value {
+  border-radius: 999px;
+  background: var(--primary);
+  transition: width 0.35s ease-out;
+}
+
+.dashboard-progress::-moz-progress-bar {
+  border-radius: 999px;
+  background: var(--primary);
+  transition: width 0.35s ease-out;
+}
+
+.dashboard-progress[data-tone="positive"]::-webkit-progress-value,
+.dashboard-progress[data-tone="positive"]::-moz-progress-bar {
+  background: var(--color-finance-positive);
+}
+
+.dashboard-progress[data-tone="warning"]::-webkit-progress-value,
+.dashboard-progress[data-tone="warning"]::-moz-progress-bar {
+  background: var(--color-finance-warning);
+}
+
+.dashboard-progress[data-tone="critical"]::-webkit-progress-value,
+.dashboard-progress[data-tone="critical"]::-moz-progress-bar {
+  background: var(--color-finance-critical);
+}
+
+.dashboard-progress[data-tone="info"]::-webkit-progress-value,
+.dashboard-progress[data-tone="info"]::-moz-progress-bar {
+  background: var(--color-finance-info);
+}
+
+html[data-theme="light"] .dashboard-progress {
+  background-color: rgb(15 23 42 / 0.08);
+}
+
+html[data-theme="light"] .dashboard-progress::-webkit-progress-bar {
+  background-color: rgb(15 23 42 / 0.08);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+}
