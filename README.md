@@ -35,7 +35,7 @@ Copy environment variables for the web app (optional; defaults work for local de
 cp apps/web/.env.example apps/web/.env
 ```
 
-Adjust `NEXT_PUBLIC_API_URL` if the app and API differ (for example API on another port). For a single Next.js app serving the UI and `/api`, pointing at the same origin is typical.
+Optional env vars are documented in `apps/web/.env.example`. Local dev serves at `/` without a base path.
 
 ## Scripts
 
@@ -51,18 +51,14 @@ Dev server: [http://localhost:3000](http://localhost:3000) (default).
 
 ```text
 apps/web/
-  app/              # App Router: pages, layout, API routes
+  app/              # App Router: pages and layout (static export; no server routes)
   components/       # UI and dashboard panels
   hooks/            # Client hooks (e.g. merged ledger data)
   lib/              # Dashboard engine, CSV/PDF ingest, URL state, backups
   types/            # Shared TypeScript types
 ```
 
-Ledger data ships as CSV under `apps/web/lib/data/`; the dashboard engine aggregates metrics and insights from those transactions.
-
-## API
-
-- `POST /api/transactions` — Filter transactions (month, direction, category, query, limit). Intended for programmatic use; the main UI reads merged data on the client.
+Ledger data ships as CSV under `apps/web/lib/data/`; the dashboard engine aggregates metrics and insights from those transactions. The UI loads and filters data entirely in the browser.
 
 ## License
 
