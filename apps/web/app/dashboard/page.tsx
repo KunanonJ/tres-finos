@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import { type DashboardSummary, type AssetPosition, type Organization } from "@/types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "https://tres-finos-api.chameleon-finance.workers.dev";
@@ -53,17 +52,9 @@ function fmtUsd(value: number | null | undefined): string {
   }).format(value ?? 0);
 }
 
-// Ensure the page expects the standard Next.js parameters
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ orgId?: string }>;
-}) {
-  const p = await searchParams;
+export default async function DashboardPage() {
   const organizations = await getOrganizations();
-  
-  // Default to the first organization if none is provided
-  const activeOrgId = p.orgId || organizations[0]?.id;
+  const activeOrgId = organizations[0]?.id;
 
   if (!activeOrgId) {
     return (
